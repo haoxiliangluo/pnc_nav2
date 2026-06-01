@@ -1,0 +1,29 @@
+<library path="astar_3d_planner">
+  <class type="pnc_nav_planners::AStar3D" base_class_type="pnc_nav_core::GlobalPlannerBase">
+    <description>A* 3D global planner on OctoMap/OccupancyGrid</description>
+  </class>
+</library>
+
+<library path="rrt_star_3d_planner">
+  <class type="pnc_nav_planners::RRTStar3D" base_class_type="pnc_nav_core::GlobalPlannerBase">
+    <description>RRT* 3D sampling-based global planner</description>
+  </class>
+</library>
+
+<library path="dwa_3d_planner">
+  <class type="pnc_nav_planners::DWA3D" base_class_type="pnc_nav_core::LocalPlannerBase">
+    <description>Dynamic Window Approach 3D local planner</description>
+  </class>
+</library>
+
+<library path="pure_pursuit_3d_tracker">
+  <class type="pnc_nav_planners::PurePursuit3D" base_class_type="pnc_nav_core::PathTrackerBase">
+    <description>Pure Pursuit 3D path tracker</description>
+  </class>
+</library>
+
+<library path="stanley_3d_tracker">
+  <class type="pnc_nav_planners::Stanley3D" base_class_type="pnc_nav_core::PathTrackerBase">
+    <description>Stanley 3D path tracker</description>
+  </class>
+</library>

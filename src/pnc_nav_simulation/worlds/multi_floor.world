@@ -1,0 +1,121 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="multi_floor">
+
+    <include><uri>model://sun</uri></include>
+    <include><uri>model://ground_plane</uri></include>
+
+    <physics type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <!-- ===== 一楼 ===== -->
+    <!-- 地板 -->
+    <model name="floor_1">
+      <static>true</static>
+      <pose>0 0 0.01 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>10 10 0.02</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>10 10 0.02</size></box></geometry>
+          <material><ambient>0.8 0.8 0.8 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 一楼墙壁 -->
+    <model name="f1_wall_n">
+      <static>true</static>
+      <pose>0 5 1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>10 0.2 3.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>10 0.2 3.0</size></box></geometry>
+          <material><ambient>0.9 0.9 0.85 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="f1_wall_s">
+      <static>true</static>
+      <pose>0 -5 1.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>10 0.2 3.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>10 0.2 3.0</size></box></geometry>
+          <material><ambient>0.9 0.9 0.85 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== 斜坡 (连接一楼和二楼) ===== -->
+    <model name="ramp">
+      <static>true</static>
+      <pose>4 0 1.5 0 0.25 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>6 1.5 0.1</size></box></geometry>
+          <surface><friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction></surface>
+        </collision>
+        <visual name="visual"><geometry><box><size>6 1.5 0.1</size></box></geometry>
+          <material><ambient>0.6 0.4 0.2 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== 二楼 ===== -->
+    <model name="floor_2">
+      <static>true</static>
+      <pose>0 0 3.01 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>10 10 0.02</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>10 10 0.02</size></box></geometry>
+          <material><ambient>0.7 0.7 0.75 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 二楼障碍物 -->
+    <model name="f2_obstacle_1">
+      <static>true</static>
+      <pose>-2 2 3.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision"><geometry><box><size>1 1 1.0</size></box></geometry></collision>
+        <visual name="visual"><geometry><box><size>1 1 1.0</size></box></geometry>
+          <material><ambient>0.3 0.5 0.7 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== 台阶 ===== -->
+    <model name="stairs">
+      <static>true</static>
+      <pose>-4 0 0 0 0 0</pose>
+      <link name="link">
+        <!-- 5级台阶，每级 0.15m 高，0.3m 深 -->
+        <collision name="step1"><geometry><box><size>0.3 1.5 0.15</size></box></geometry>
+          <pose>0 0 0.075 0 0 0</pose>
+        </collision>
+        <visual name="step1"><geometry><box><size>0.3 1.5 0.15</size></box></geometry>
+          <pose>0 0 0.075 0 0 0</pose>
+          <material><ambient>0.6 0.6 0.6 1</ambient></material>
+        </visual>
+
+        <collision name="step2"><geometry><box><size>0.3 1.5 0.30</size></box></geometry>
+          <pose>0.3 0 0.15 0 0 0</pose>
+        </collision>
+        <visual name="step2"><geometry><box><size>0.3 1.5 0.30</size></box></geometry>
+          <pose>0.3 0 0.15 0 0 0</pose>
+          <material><ambient>0.6 0.6 0.6 1</ambient></material>
+        </visual>
+
+        <collision name="step3"><geometry><box><size>0.3 1.5 0.45</size></box></geometry>
+          <pose>0.6 0 0.225 0 0 0</pose>
+        </collision>
+        <visual name="step3"><geometry><box><size>0.3 1.5 0.45</size></box></geometry>
+          <pose>0.6 0 0.225 0 0 0</pose>
+          <material><ambient>0.6 0.6 0.6 1</ambient></material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

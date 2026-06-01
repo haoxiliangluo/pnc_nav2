@@ -1,0 +1,7 @@
+# 地图操作
+string action          # "save", "load", "clear"
+string map_path        # 地图文件路径
+string map_format      # "octomap", "pcd", "pgm"
+---
+bool success
+string message

@@ -1,0 +1,6 @@
+# 切换规划器
+string planner_type    # "global", "local", "tracker"
+string plugin_name     # 插件全名，如 "pnc_nav_planners::AStar3D"
+---
+bool success
+string message
