@@ -41,7 +41,7 @@ def generate_launch_description():
         # --- Gazebo ---
         ExecuteProcess(
             cmd=['gazebo', '--verbose',
-                 PathJoinSubstitution([pkg_share, 'worlds', world, '.world']),
+                 PathJoinSubstitution([pkg_share, 'worlds', [world, '.world']]),
                  '-s', 'libgazebo_ros_init.so',
                  '-s', 'libgazebo_ros_factory.so'],
             output='screen'
