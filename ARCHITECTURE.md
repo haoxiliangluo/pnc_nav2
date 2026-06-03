@@ -207,11 +207,11 @@ pnc_nav2/                            # 顶层工作空间
 │   │   ├── mpc_locomotion/          # MPC步态控制
 │   │   └── vel_smoother/            # 速度平滑
 │   │
-│   ├── pnc_nav_simulation/         # 仿真环境
-│   │   ├── gazebo_worlds/           # Gazebo世界文件
-│   │   ├── robot_description/       # URDF/Xacro模型
-│   │   ├── gazebo_plugins/          # 自定义Gazebo插件
-│   │   └── sim_bridge/              # 仿真↔导航接口桥接
+│   ├── pnc_nav_sim/                # 仿真环境（经典 Gazebo）
+│   │   ├── worlds/                  # Gazebo 世界文件
+│   │   ├── urdf/diff_drive/         # 差速小车（自有）
+│   │   ├── urdf/unitree_go2/        # Go2（复用 go2_description 网格 + planar_move）
+│   │   └── urdf/sensors/            # 通用传感器宏（Mid360 / IMU）
 │   │
 │   └── pnc_nav_utils/              # 工具库
 │       ├── visualization/           # RViz可视化工具

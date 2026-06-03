@@ -1,28 +1,31 @@
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-    """WPR (启智) 机器人仿真 — 轮式2D/2.5D导航验证"""
+    """差速小车仿真 — Phase 1 2D导航验证"""
 
-    pkg_share = FindPackageShare('pnc_nav_simulation')
+    pkg_share = FindPackageShare('pnc_nav_sim')
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    world = LaunchConfiguration('world', default='office')
+    world = LaunchConfiguration('world', default='simple_maze')
 
+    # URDF
     urdf_file = PathJoinSubstitution([
-        pkg_share, 'urdf', 'wpr', 'wpr_nav.urdf.xacro'
+        pkg_share, 'urdf', 'diff_drive', 'diff_drive.urdf.xacro'
     ])
 
     robot_description = Command(['xacro ', urdf_file])
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true'),
-        DeclareLaunchArgument('world', default_value='office',
-            description='World: office, simple_maze'),
+        DeclareLaunchArgument('world', default_value='simple_maze',
+            description='World file name (without .world extension)'),
 
         # --- Gazebo ---
         ExecuteProcess(
@@ -45,14 +48,14 @@ def generate_launch_description():
             }]
         ),
 
-        # --- Spawn WPR ---
+        # --- Spawn Robot ---
         Node(
             package='gazebo_ros',
             executable='spawn_entity.py',
-            name='spawn_wpr',
+            name='spawn_diff_drive',
             arguments=[
                 '-topic', 'robot_description',
-                '-entity', 'wpr_robot',
+                '-entity', 'diff_drive_robot',
                 '-x', '0.0',
                 '-y', '0.0',
                 '-z', '0.1',

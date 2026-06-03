@@ -13,7 +13,7 @@
   <exec_depend>pnc_nav_interfaces</exec_depend>
   <exec_depend>pnc_nav_planners</exec_depend>
   <exec_depend>pnc_nav_control</exec_depend>
-  <exec_depend>pnc_nav_simulation</exec_depend>
+  <exec_depend>pnc_nav_sim</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>ros2launch</exec_depend>
 

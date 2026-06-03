@@ -238,8 +238,10 @@ bool DWA3D::isGoalReached(
 
   double current_yaw = tf2::getYaw(current_pose.pose.orientation);
   double goal_yaw = tf2::getYaw(goal.pose.orientation);
-  double dyaw = std::abs(current_yaw - goal_yaw);
+  double dyaw = current_yaw - goal_yaw;
+  // 归一化到 [-π, π]
   while (dyaw > M_PI) dyaw -= 2.0 * M_PI;
+  while (dyaw < -M_PI) dyaw += 2.0 * M_PI;
 
   return std::abs(dyaw) < angle_tolerance;
 }

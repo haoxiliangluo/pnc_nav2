@@ -75,7 +75,7 @@ ros2 launch pnc_nav_bringup sim_3d_bringup.launch.py
 | `pnc_nav_localization` | 定位模块接口 |
 | `pnc_nav_planners` | 规划器插件集合 (全局/局部/跟踪) |
 | `pnc_nav_control` | 运动控制 (RL/MPC步态) |
-| `pnc_nav_simulation` | 仿真环境与模型 |
+| `pnc_nav_sim` | 仿真环境与传感器（经典 Gazebo） |
 | `pnc_nav_bringup` | 启动文件与参数配置 |
 | `pnc_nav_utils` | 可视化、评估、工具 |
 

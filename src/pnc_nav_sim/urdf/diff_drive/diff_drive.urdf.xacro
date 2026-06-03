@@ -6,8 +6,8 @@
     搭载 Livox Mid360 + IMU
   -->
 
-  <xacro:include filename="$(find pnc_nav_simulation)/urdf/sensors/livox_mid360.urdf.xacro"/>
-  <xacro:include filename="$(find pnc_nav_simulation)/urdf/sensors/imu.urdf.xacro"/>
+  <xacro:include filename="$(find pnc_nav_sim)/urdf/sensors/livox_mid360.urdf.xacro"/>
+  <xacro:include filename="$(find pnc_nav_sim)/urdf/sensors/imu.urdf.xacro"/>
 
   <!-- 参数 -->
   <xacro:property name="chassis_length" value="0.4"/>

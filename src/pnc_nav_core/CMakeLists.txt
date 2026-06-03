@@ -18,6 +18,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(pnc_nav_interfaces REQUIRED)
+find_package(nav2_costmap_2d REQUIRED)
 
 set(dependencies
   rclcpp
@@ -30,11 +31,13 @@ set(dependencies
   tf2_ros
   tf2_geometry_msgs
   pnc_nav_interfaces
+  nav2_costmap_2d
 )
 
 # Navigation server library
 add_library(nav_server SHARED
   src/nav_server.cpp
+  src/nav2_costmap_adapter.cpp
 )
 target_include_directories(nav_server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

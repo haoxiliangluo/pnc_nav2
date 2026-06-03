@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="go2_classic">
+
+  <!--
+    Unitree Go2 — classic Gazebo navigation model
+    ================================================
+    WHY THIS FILE EXISTS
+    The upstream go2_description (third_party/ROS2-Gazebo-GO2) is built for the
+    *new* Gazebo Sim (gz_ros2_control / libgz-sim-*-system plugins) and cannot
+    load in classic Gazebo 11, which the rest of pnc_nav_sim targets.
+
+    This model REUSES the upstream visual meshes (.dae are simulator-agnostic)
+    so the robot looks like a real Go2, but replaces the full articulated
+    leg/control stack with a single planar_move plugin. For Phase 1 navigation
+    validation the locomotion layer is abstracted away — the planner/controller
+    only needs a body that accepts cmd_vel and publishes odom + TF + sensors.
+
+    When the RL/MPC locomotion layer lands (Phase 4), swap planar_move for the
+    real gait controller; the sensor mounts and frames stay identical.
+  -->
+
+  <!-- Trunk dimensions copied from upstream const.xacro for an accurate collision box -->
+  <xacro:property name="trunk_length" value="0.3762"/>
+  <xacro:property name="trunk_width"  value="0.0935"/>
+  <xacro:property name="trunk_height" value="0.114"/>
+  <xacro:property name="trunk_mass"   value="6.921"/>
+  <!-- Nominal standing height of the trunk above ground -->
+  <xacro:property name="stand_height" value="0.32"/>
+
+  <xacro:include filename="$(find pnc_nav_sim)/urdf/sensors/livox_mid360.urdf.xacro"/>
+  <xacro:include filename="$(find pnc_nav_sim)/urdf/sensors/imu.urdf.xacro"/>
+
+  <!-- ground-projected frame used as the planar_move base -->
+  <link name="base_footprint"/>
+
+  <link name="base_link">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <!-- real Go2 trunk mesh, reused from upstream description package -->
+        <mesh filename="file://$(find go2_description)/meshes/trunk.dae" scale="1 1 1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+        <box size="${trunk_length} ${trunk_width} ${trunk_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.021112 0.0 -0.005366"/>
+      <mass value="${trunk_mass}"/>
+      <inertia ixx="0.02448" ixy="0.00012166" ixz="0.0014849"
+               iyy="0.098077" iyz="-3.12E-05" izz="0.107"/>
+    </inertial>
+  </link>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 ${stand_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!--
+    Static feet — purely visual, no joints actuated. They give the robot a
+    recognisable Go2 stance for RViz/Gazebo without simulating leg dynamics.
+    Reuses the upstream foot mesh; offsets come from const.xacro (leg_offset_*).
+  -->
+  <xacro:macro name="go2_foot" params="name x y">
+    <link name="${name}_foot">
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find go2_description)/meshes/foot.dae" scale="1 1 1"/>
+        </geometry>
+      </visual>
+      <inertial>
+        <mass value="0.06"/>
+        <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+      </inertial>
+    </link>
+    <joint name="${name}_foot_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="${name}_foot"/>
+      <origin xyz="${x} ${y} -${stand_height}" rpy="0 0 0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:go2_foot name="FL" x="0.1934"  y="0.142"/>
+  <xacro:go2_foot name="FR" x="0.1934"  y="-0.142"/>
+  <xacro:go2_foot name="RL" x="-0.1934" y="0.142"/>
+  <xacro:go2_foot name="RR" x="-0.1934" y="-0.142"/>
+
+  <!-- Livox Mid360 mounted on the trunk top -->
+  <xacro:livox_mid360
+    parent_link="base_link"
+    xyz="0.15 0 0.08"
+    rpy="0 0 0"
+    topic="/livox/pointcloud"
+    frame="livox_frame"/>
+
+  <!-- IMU at body center -->
+  <xacro:imu_sensor
+    parent_link="base_link"
+    xyz="0 0 0"
+    rpy="0 0 0"
+    topic="/imu"
+    frame="imu_link"
+    update_rate="500"/>
+
+  <!--
+    Locomotion abstraction (Phase 1): planar_move accepts cmd_vel and publishes
+    odom + odom->base_footprint TF. Replace with the gait controller in Phase 4;
+    cmd_vel stays the contract between navigation and locomotion.
+  -->
+  <gazebo>
+    <plugin name="planar_move_controller" filename="libgazebo_ros_planar_move.so">
+      <ros>
+        <remapping>cmd_vel:=cmd_vel</remapping>
+        <remapping>odom:=odom</remapping>
+      </ros>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <update_rate>50.0</update_rate>
+    </plugin>
+  </gazebo>
+
+</robot>
