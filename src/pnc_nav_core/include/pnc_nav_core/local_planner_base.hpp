@@ -6,12 +6,12 @@
 
 #include <memory>
 #include <string>
-
+#include "nav_msgs/msg/path.hpp"
 #include "rclcpp/rclcpp.hpp"
+
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
-#include "nav_msgs/msg/path.hpp"
 #include "pnc_nav_core/costmap_interface.hpp"
 
 namespace pnc_nav_core

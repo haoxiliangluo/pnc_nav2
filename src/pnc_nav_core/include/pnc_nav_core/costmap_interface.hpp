@@ -17,10 +17,10 @@ namespace pnc_nav_core
 /// 代价值常量
 namespace cost_values
 {
-constexpr uint8_t FREE_SPACE = 0;
-constexpr uint8_t INSCRIBED = 253;
-constexpr uint8_t LETHAL = 254;
-constexpr uint8_t UNKNOWN = 255;
+constexpr uint8_t FREE_SPACE = 0;// 完全可通行
+constexpr uint8_t INSCRIBED = 253;// 机器人占据的空间，或与障碍物接触的空间
+constexpr uint8_t LETHAL = 254;// 不可通行
+constexpr uint8_t UNKNOWN = 255;// 未知区域
 }  // namespace cost_values
 
 /**
@@ -75,7 +75,6 @@ public:
    */
   virtual double getTraversability(double x, double y, double z) const
   {
-    (void)x; (void)y; (void)z;
     return isOccupied(x, y, z) ? 0.0 : 1.0;
   }
 

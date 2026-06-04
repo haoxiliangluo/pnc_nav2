@@ -1,6 +1,7 @@
-import os
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -11,6 +12,8 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     nav_params_file = LaunchConfiguration('params_file')
+    world = LaunchConfiguration('world')
+    use_rviz = LaunchConfiguration('use_rviz')
 
     default_params = PathJoinSubstitution([
         FindPackageShare('pnc_nav_bringup'), 'config', 'nav_params.yaml'
@@ -33,9 +36,32 @@ def generate_launch_description():
             default_value='simple_maze',
             description='Gazebo world name'
         ),
+        DeclareLaunchArgument(
+            'use_rviz',
+            default_value='false',
+            description='Start RViz for goal input and path visualization'
+        ),
 
         # --- Gazebo 仿真 (2D差速小车) ---
-        # TODO: IncludeLaunchDescription for gazebo + robot spawn
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution([
+                FindPackageShare('pnc_nav_sim'), 'launch', 'diff_drive_sim.launch.py'
+            ])),
+            launch_arguments={
+                'use_sim_time': use_sim_time,
+                'world': world,
+            }.items()
+        ),
+
+        # Gazebo diff-drive publishes odom -> base_footprint. Phase 1 uses
+        # a fixed map -> odom transform so planner paths live in the map frame.
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='map_to_odom_tf',
+            arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+            parameters=[{'use_sim_time': use_sim_time}]
+        ),
 
         # --- 导航服务器 ---
         Node(
@@ -46,24 +72,15 @@ def generate_launch_description():
             parameters=[
                 nav_params_file,
                 {'use_sim_time': use_sim_time}
-            ],
-            remappings=[
-                ('cmd_vel', '/diff_drive/cmd_vel'),
-                ('odom', '/diff_drive/odom'),
             ]
         ),
-
-        # --- 地图服务器 (2D模式使用Nav2 map_server) ---
-        # TODO: Node for map_server
 
         # --- RViz 可视化 ---
         Node(
             package='rviz2',
             executable='rviz2',
             name='rviz2',
-            arguments=['-d', PathJoinSubstitution([
-                FindPackageShare('pnc_nav_bringup'), 'rviz', 'nav_2d.rviz'
-            ])],
+            condition=IfCondition(use_rviz),
             parameters=[{'use_sim_time': use_sim_time}]
         ),
     ])

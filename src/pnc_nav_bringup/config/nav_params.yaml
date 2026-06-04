@@ -13,87 +13,43 @@ nav_server:
 
     # --- 插件选择 ---
     global_planner_plugin: "pnc_nav_planners::AStar3D"
-    local_planner_plugin: "pnc_nav_planners::DWA3D"
     path_tracker_plugin: "pnc_nav_planners::PurePursuit3D"
 
-    # --- 全局规划器参数 ---
-    global_planner:
-      # A* 3D 参数
-      astar_3d:
-        resolution: 0.1              # 搜索分辨率 (m)
-        heuristic_weight: 1.2        # 启发式权重
-        max_iterations: 100000       # 最大迭代次数
-        allow_unknown: false         # 是否允许穿越未知区域
-        diagonal_movement: true      # 是否允许对角线移动
-        height_penalty: 2.0          # 高度变化惩罚系数
-
-      # RRT* 3D 参数
-      rrt_star_3d:
-        max_iterations: 50000
-        step_size: 0.3
-        goal_bias: 0.1
-        rewire_radius: 0.5
-        max_planning_time: 5.0       # 最大规划时间 (s)
-
-    # --- 局部规划器参数 ---
-    local_planner:
-      # DWA 3D 参数
-      dwa_3d:
-        max_vel_x: 0.5              # 最大前进速度 (m/s)
-        max_vel_y: 0.3              # 最大侧向速度 (m/s)
-        max_vel_theta: 1.0          # 最大旋转速度 (rad/s)
-        max_vel_z: 0.2              # 最大垂直速度 (m/s)
-        acc_lim_x: 1.0              # 前进加速度限制
-        acc_lim_y: 0.8
-        acc_lim_theta: 2.0
-        sim_time: 1.5               # 仿真时间 (s)
-        vx_samples: 10              # 速度采样数
-        vy_samples: 5
-        vtheta_samples: 20
-        path_distance_bias: 32.0    # 路径距离权重
-        goal_distance_bias: 24.0    # 目标距离权重
-        obstacle_cost_bias: 0.01    # 障碍物代价权重
-
-      # MPC 局部规划参数
-      mpc_local:
-        prediction_horizon: 20       # 预测步数
-        dt: 0.1                      # 时间步长 (s)
-        max_vel_x: 0.5
-        max_vel_theta: 1.0
-        weight_state: [1.0, 1.0, 0.5, 0.1]   # [x, y, z, yaw]
-        weight_input: [0.01, 0.01, 0.01]      # [vx, vy, omega]
-        weight_terminal: [10.0, 10.0, 5.0, 1.0]
-
-    # --- 路径跟踪器参数 ---
-    path_tracker:
-      # Pure Pursuit 3D 参数
-      pure_pursuit_3d:
-        lookahead_distance: 0.6      # 前视距离 (m)
-        min_lookahead: 0.3
-        max_lookahead: 1.5
-        lookahead_gain: 0.5          # 速度自适应前视增益
-        max_linear_vel: 0.5
-        max_angular_vel: 1.0
-
-      # Stanley 3D 参数
-      stanley_3d:
-        k_cross_track: 1.0           # 横向误差增益
-        k_heading: 1.0               # 航向误差增益
-        max_steer: 0.8               # 最大转向角 (rad)
-
-    # --- 代价地图参数 ---
+    # --- Phase 1: 简单 2D costmap ---
     costmap:
-      resolution: 0.1                # 代价地图分辨率 (m)
-      robot_radius: 0.25             # 机器人半径 (m)
-      inflation_radius: 0.5          # 膨胀半径 (m)
-      obstacle_range: 5.0            # 障碍物检测范围 (m)
-      raytrace_range: 6.0            # 射线追踪范围 (m)
+      frame_id: "map"
+      origin_x: -5.0
+      origin_y: -5.0
+      width: 10.0
+      height: 10.0
+      resolution: 0.1
+      robot_radius: 0.25
+      inflation_radius: 0.5
+      # 矩形障碍物: [min_x, min_y, max_x, max_y, ...]
+      obstacles: [
+        0.5, 1.95, 3.5, 2.05,
+        -1.05, -2.0, -0.95, 2.0,
+        1.25, -2.75, 2.75, -1.25,
+        -4.0, -3.05, -2.0, -2.95,
+        -3.05, 0.5, -2.95, 3.5
+      ]
 
-    # --- 机器人参数 ---
-    robot:
-      type: "quadruped"              # "quadruped", "differential", "omnidirectional"
-      max_step_height: 0.15          # 最大台阶高度 (m)
-      max_slope: 0.5                 # 最大可通行坡度 (rad, ~28.6°)
-      body_length: 0.4               # 机体长度 (m)
-      body_width: 0.3                # 机体宽度 (m)
-      body_height: 0.3               # 机体高度 (m)
+    # --- 全局规划器参数: 与插件实例名 global_planner 对齐 ---
+    global_planner:
+      resolution: 0.1              # 搜索分辨率 (m)
+      heuristic_weight: 1.2        # 启发式权重
+      max_iterations: 100000       # 最大迭代次数
+      allow_unknown: false         # 是否允许穿越未知区域
+      diagonal_movement: true      # 是否允许对角线移动
+      height_penalty: 2.0          # 高度变化惩罚系数
+      use_3d: false                # Phase 1 只跑 2D
+
+    # --- 路径跟踪器参数: 与插件实例名 path_tracker 对齐 ---
+    path_tracker:
+      lookahead_distance: 0.6      # 前视距离 (m)
+      min_lookahead: 0.3
+      max_lookahead: 1.5
+      lookahead_gain: 0.5          # 速度自适应前视增益
+      max_linear_vel: 0.5
+      max_angular_vel: 1.0
+      min_linear_vel: 0.05

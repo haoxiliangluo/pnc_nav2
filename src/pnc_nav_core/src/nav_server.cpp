@@ -5,6 +5,7 @@
 
 #include <chrono>
 
+#include "pnc_nav_core/simple_costmap_2d.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace pnc_nav_core
@@ -13,7 +14,6 @@ namespace pnc_nav_core
 NavServer::NavServer(const rclcpp::NodeOptions & options)
 : Node("nav_server", options),
   global_planner_loader_("pnc_nav_core", "pnc_nav_core::GlobalPlannerBase"),
-  local_planner_loader_("pnc_nav_core", "pnc_nav_core::LocalPlannerBase"),
   path_tracker_loader_("pnc_nav_core", "pnc_nav_core::PathTrackerBase")
 {
   // 声明参数
@@ -24,7 +24,6 @@ NavServer::NavServer(const rclcpp::NodeOptions & options)
   declare_parameter("global_frame", "map");
   declare_parameter("robot_frame", "base_link");
   declare_parameter("global_planner_plugin", "pnc_nav_planners::AStar3D");
-  declare_parameter("local_planner_plugin", "pnc_nav_planners::DWA3D");
   declare_parameter("path_tracker_plugin", "pnc_nav_planners::PurePursuit3D");
 
   // 获取参数
@@ -41,7 +40,6 @@ NavServer::NavServer(const rclcpp::NodeOptions & options)
 NavServer::~NavServer()
 {
   if (global_planner_) { global_planner_->cleanup(); }
-  if (local_planner_) { local_planner_->cleanup(); }
   if (path_tracker_) { path_tracker_->cleanup(); }
 }
 
@@ -51,9 +49,11 @@ void NavServer::initialize()
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
+  // Phase 1: 手写轻量 2D costmap, 用于验证 A* + Pure Pursuit 闭环。
+  costmap_ = std::make_shared<SimpleCostmap2D>(shared_from_this());
+
   // 发布者
   global_plan_pub_ = create_publisher<nav_msgs::msg::Path>("global_plan", 10);
-  local_plan_pub_ = create_publisher<nav_msgs::msg::Path>("local_plan", 10);
   cmd_vel_pub_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
 
   // 订阅目标点
@@ -76,7 +76,6 @@ void NavServer::initialize()
 void NavServer::loadPlugins()
 {
   auto global_plugin_name = get_parameter("global_planner_plugin").as_string();
-  auto local_plugin_name = get_parameter("local_planner_plugin").as_string();
   auto tracker_plugin_name = get_parameter("path_tracker_plugin").as_string();
 
   try {
@@ -87,16 +86,6 @@ void NavServer::loadPlugins()
   } catch (const pluginlib::PluginlibException & ex) {
     RCLCPP_ERROR(get_logger(), "Failed to load global planner '%s': %s",
       global_plugin_name.c_str(), ex.what());
-  }
-
-  try {
-    local_planner_ = local_planner_loader_.createSharedInstance(local_plugin_name);
-    local_planner_->configure(shared_from_this(), "local_planner", costmap_);
-    local_planner_->activate();
-    RCLCPP_INFO(get_logger(), "Loaded local planner: %s", local_plugin_name.c_str());
-  } catch (const pluginlib::PluginlibException & ex) {
-    RCLCPP_ERROR(get_logger(), "Failed to load local planner '%s': %s",
-      local_plugin_name.c_str(), ex.what());
   }
 
   try {
@@ -128,24 +117,6 @@ bool NavServer::switchGlobalPlanner(const std::string & plugin_name)
   }
 }
 
-bool NavServer::switchLocalPlanner(const std::string & plugin_name)
-{
-  try {
-    if (local_planner_) {
-      local_planner_->deactivate();
-      local_planner_->cleanup();
-    }
-    local_planner_ = local_planner_loader_.createSharedInstance(plugin_name);
-    local_planner_->configure(shared_from_this(), "local_planner", costmap_);
-    local_planner_->activate();
-    RCLCPP_INFO(get_logger(), "Switched local planner to: %s", plugin_name.c_str());
-    return true;
-  } catch (const pluginlib::PluginlibException & ex) {
-    RCLCPP_ERROR(get_logger(), "Failed to switch local planner: %s", ex.what());
-    return false;
-  }
-}
-
 bool NavServer::switchPathTracker(const std::string & plugin_name)
 {
   try {
@@ -171,9 +142,8 @@ void NavServer::transitionTo(NavState new_state)
   state_ = new_state;
 }
 
-geometry_msgs::msg::PoseStamped NavServer::getCurrentPose()
+bool NavServer::getCurrentPose(geometry_msgs::msg::PoseStamped & pose)
 {
-  geometry_msgs::msg::PoseStamped pose;
   try {
     auto transform = tf_buffer_->lookupTransform(
       global_frame_, robot_frame_, tf2::TimePointZero);
@@ -182,11 +152,12 @@ geometry_msgs::msg::PoseStamped NavServer::getCurrentPose()
     pose.pose.position.y = transform.transform.translation.y;
     pose.pose.position.z = transform.transform.translation.z;
     pose.pose.orientation = transform.transform.rotation;
+    return true;
   } catch (const tf2::TransformException & ex) {
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 1000,
       "Could not get robot pose: %s", ex.what());
   }
-  return pose;
+  return false;
 }
 
 void NavServer::goalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
@@ -195,6 +166,9 @@ void NavServer::goalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
     msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
 
   current_goal_ = *msg;
+  if (current_goal_.header.frame_id.empty()) {
+    current_goal_.header.frame_id = global_frame_;
+  }
   transitionTo(NavState::PLANNING);
 }
 
@@ -212,7 +186,11 @@ void NavServer::controlLoop()
         break;
       }
 
-      auto current_pose = getCurrentPose();
+      geometry_msgs::msg::PoseStamped current_pose;
+      if (!getCurrentPose(current_pose)) {
+        break;
+      }
+
       auto path = global_planner_->createPlan(current_pose, current_goal_);
 
       if (path.poses.empty()) {
@@ -222,9 +200,6 @@ void NavServer::controlLoop()
         current_global_path_ = path;
         global_plan_pub_->publish(path);
 
-        if (local_planner_) {
-          local_planner_->setPath(path);
-        }
         if (path_tracker_) {
           path_tracker_->setPath(path);
         }
@@ -237,21 +212,19 @@ void NavServer::controlLoop()
 
     case NavState::FOLLOWING:
     {
-      auto current_pose = getCurrentPose();
+      geometry_msgs::msg::PoseStamped current_pose;
+      if (!getCurrentPose(current_pose)) {
+        break;
+      }
 
       geometry_msgs::msg::TwistStamped cmd;
       bool goal_reached = false;
 
-      if (local_planner_) {
-        cmd = local_planner_->computeVelocityCommand(current_pose, current_velocity_);
-        goal_reached = local_planner_->isGoalReached(
-          current_pose, current_goal_, goal_tolerance_dist_, goal_tolerance_angle_);
-        local_plan_pub_->publish(local_planner_->getLocalPlan());
-      } else if (path_tracker_) {
+      if (path_tracker_) {
         cmd = path_tracker_->computeVelocityCommand(current_pose, current_velocity_);
         goal_reached = path_tracker_->isPathCompleted(current_pose, goal_tolerance_dist_);
       } else {
-        RCLCPP_ERROR(get_logger(), "No local planner or path tracker loaded");
+        RCLCPP_ERROR(get_logger(), "No path tracker loaded");
         transitionTo(NavState::FAILED);
         break;
       }
