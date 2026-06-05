@@ -34,7 +34,7 @@ public:
   void deactivate() override;
   void cleanup() override;
 
-  void setPath(const nav_msgs::msg::Path & path) override;
+  bool setPath(const nav_msgs::msg::Path & path) override;
 
   geometry_msgs::msg::TwistStamped computeVelocityCommand(
     const geometry_msgs::msg::PoseStamped & current_pose,

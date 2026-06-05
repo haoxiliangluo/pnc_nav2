@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "pluginlib/class_list_macros.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"
 
 namespace pnc_nav_planners
@@ -54,10 +55,15 @@ void PurePursuit3D::cleanup()
   node_.reset();
 }
 
-void PurePursuit3D::setPath(const nav_msgs::msg::Path & path)
+bool PurePursuit3D::setPath(const nav_msgs::msg::Path & path)
 {
+  if (path.poses.empty()) {
+    return false;
+  }
+
   path_ = path;
   current_waypoint_idx_ = 0;
+  return true;
 }
 
 double PurePursuit3D::computeAdaptiveLookahead(double current_speed) const

@@ -23,6 +23,7 @@ NavServer::NavServer(const rclcpp::NodeOptions & options)
   declare_parameter("max_planning_retries", 3);
   declare_parameter("global_frame", "map");
   declare_parameter("robot_frame", "base_link");
+
   declare_parameter("global_planner_plugin", "pnc_nav_planners::AStar3D");
   declare_parameter("path_tracker_plugin", "pnc_nav_planners::PurePursuit3D");
 
@@ -200,10 +201,26 @@ void NavServer::controlLoop()
         current_global_path_ = path;
         global_plan_pub_->publish(path);
 
-        if (path_tracker_) {
-          path_tracker_->setPath(path);
+        if(!path_tracker_) {
+          RCLCPP_ERROR(get_logger(), "No path tracker loaded");
+          transitionTo(NavState::FAILED);
+          break;
         }
-
+        else {
+          
+            if(path_tracker_->setPath(path))
+            {
+              RCLCPP_INFO(get_logger(), "Path tracker set with new path");
+            }
+            else
+            {
+              RCLCPP_ERROR(get_logger(), "Path tracker failed to set the new path");
+              transitionTo(NavState::FAILED);
+              break;
+            }
+          
+        }
+        
         transitionTo(NavState::FOLLOWING);
         RCLCPP_INFO(get_logger(), "Global path found with %zu waypoints", path.poses.size());
       }

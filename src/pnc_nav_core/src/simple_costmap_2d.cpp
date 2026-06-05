@@ -123,7 +123,7 @@ double SimpleCostmap2D::distanceToBox(double x, double y, const ObstacleBox & bo
 
 double SimpleCostmap2D::distanceToNearestObstacle(double x, double y) const
 {
-  double min_distance = std::numeric_limits<double>::max();
+  double min_distance = std::numeric_limits<double>::max();// 初始化为无穷大
   for (const auto & obstacle : obstacles_) {
     min_distance = std::min(min_distance, distanceToBox(x, y, obstacle));
   }

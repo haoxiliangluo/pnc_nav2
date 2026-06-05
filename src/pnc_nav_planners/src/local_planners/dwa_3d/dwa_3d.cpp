@@ -8,6 +8,7 @@
 #include <limits>
 
 #include "pluginlib/class_list_macros.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"
 
 namespace pnc_nav_planners
@@ -67,12 +68,15 @@ void DWA3D::cleanup()
   costmap_.reset();
 }
 
-void DWA3D::setPath(const nav_msgs::msg::Path & path)
+bool DWA3D::setPath(const nav_msgs::msg::Path & path)
 {
-  global_path_ = path;
-  if (!path.poses.empty()) {
-    current_goal_ = path.poses.back();
+  if (path.poses.empty()) {
+    return false;
   }
+
+  global_path_ = path;
+  current_goal_ = path.poses.back();
+  return true;
 }
 
 void DWA3D::computeDynamicWindow(

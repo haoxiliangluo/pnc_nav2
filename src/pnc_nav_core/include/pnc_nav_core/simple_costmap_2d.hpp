@@ -47,17 +47,17 @@ private:
   };
 
   void loadObstacleBoxes(const std::vector<double> & values);
-  double distanceToBox(double x, double y, const ObstacleBox & box) const;
-  double distanceToNearestObstacle(double x, double y) const;
+  double distanceToBox(double x, double y, const ObstacleBox & box) const;// 计算点到矩形障碍的距离
+  double distanceToNearestObstacle(double x, double y) const;// 计算到最近障碍物的距离
 
   std::string frame_id_{"map"};
-  double origin_x_{-5.0};
-  double origin_y_{-5.0};
+  double origin_x_{-5.0};// 地图左下角坐标
+  double origin_y_{-5.0};// 地图左下角坐标
   double width_{10.0};
   double height_{10.0};
-  double resolution_{0.1};
-  double lethal_radius_{0.15};
-  double inflation_radius_{0.5};
+  double resolution_{0.1};// 每个栅格的边长
+  double lethal_radius_{0.15};// 机器人半径 + 安全边距
+  double inflation_radius_{0.5};// 膨胀半径，影响代价衰减范围
   std::vector<ObstacleBox> obstacles_;
 };
 

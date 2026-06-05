@@ -61,7 +61,7 @@ public:
 private:
   // --- 状态机 ---
   NavState state_{NavState::IDLE};
-  void transitionTo(NavState new_state);
+  void transitionTo(NavState new_state);// 状态转换，负责日志记录和状态更新
 
   // --- 插件管理：Phase 1 只保留全局规划 + 路径跟踪闭环 ---
   pluginlib::ClassLoader<GlobalPlannerBase> global_planner_loader_;
@@ -75,9 +75,9 @@ private:
   bool switchPathTracker(const std::string & plugin_name);
 
   // --- TF ---
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-  bool getCurrentPose(geometry_msgs::msg::PoseStamped & pose);
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;// TF缓存
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;// TF监听器
+  bool getCurrentPose(geometry_msgs::msg::PoseStamped & pose);// 获取机器人当前位姿
 
   // --- 代价地图 ---
   CostmapInterface::SharedPtr costmap_;
@@ -100,10 +100,10 @@ private:
   geometry_msgs::msg::Twist current_velocity_;
 
   // --- 参数 ---
-  double control_frequency_{20.0};
-  double goal_tolerance_dist_{0.15};
-  double goal_tolerance_angle_{0.1};
-  int max_planning_retries_{3};
+  double control_frequency_{20.0};// 控制循环频率 (Hz)
+  double goal_tolerance_dist_{0.15};// 到达目标的距离容差 (m)
+  double goal_tolerance_angle_{0.1};// 到达目标的角度容差 (rad)
+  int max_planning_retries_{3};// 最大规划重试次数
   std::string global_frame_{"map"};
   std::string robot_frame_{"base_link"};
 };

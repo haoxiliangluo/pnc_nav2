@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "pluginlib/class_list_macros.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "tf2/utils.h"
 
 namespace pnc_nav_planners
@@ -46,10 +47,15 @@ void Stanley3D::cleanup()
   node_.reset();
 }
 
-void Stanley3D::setPath(const nav_msgs::msg::Path & path)
+bool Stanley3D::setPath(const nav_msgs::msg::Path & path)
 {
+  if (path.poses.empty()) {
+    return false;
+  }
+
   path_ = path;
   current_waypoint_idx_ = 0;
+  return true;
 }
 
 size_t Stanley3D::findClosestPoint(const geometry_msgs::msg::PoseStamped & pose) const

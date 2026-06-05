@@ -50,7 +50,7 @@ public:
    * @brief 设置全局路径（由全局规划器提供）
    * @param path 全局路径
    */
-  virtual void setPath(const nav_msgs::msg::Path & path) = 0;
+  virtual bool setPath(const nav_msgs::msg::Path & path) = 0;
 
   /**
    * @brief 计算速度指令

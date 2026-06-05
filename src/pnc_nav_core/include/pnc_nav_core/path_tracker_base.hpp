@@ -48,7 +48,7 @@ public:
    * @brief 设置要跟踪的路径
    * @param path 目标路径
    */
-  virtual void setPath(const nav_msgs::msg::Path & path) = 0;
+  virtual bool setPath(const nav_msgs::msg::Path & path) = 0;
 
   /**
    * @brief 计算跟踪速度指令
