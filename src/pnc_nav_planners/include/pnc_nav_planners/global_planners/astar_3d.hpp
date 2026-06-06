@@ -114,23 +114,23 @@ private:
   nav_msgs::msg::Path smoothPath(const nav_msgs::msg::Path & raw_path) const;
 
   // --- 成员变量 ---
-  rclcpp::Node::SharedPtr node_;
-  std::string name_;
-  std::shared_ptr<pnc_nav_core::CostmapInterface> costmap_;
+  rclcpp::Node::SharedPtr node_;// ROS节点指针
+  std::string name_; // 规划器实例名称
+  std::shared_ptr<pnc_nav_core::CostmapInterface> costmap_;// 代价地图接口
 
   // 参数
-  double resolution_{0.1};
-  double heuristic_weight_{1.2};
-  int max_iterations_{100000};
-  bool allow_unknown_{false};
-  bool diagonal_movement_{true};
-  double height_penalty_{2.0};
+  double resolution_{0.1};// 栅格分辨率 (m)
+  double heuristic_weight_{1.2};// 启发式权重
+  int max_iterations_{100000};// 最大迭代次数
+  bool allow_unknown_{false};// 是否允许未知区域
+  bool diagonal_movement_{true};// 是否允许对角移动
+  double height_penalty_{2.0};// 高度惩罚系数 (3D模式下)
   bool use_3d_{false};           // false = 2D模式, true = 3D模式
 
   // 地图边界（栅格坐标）
-  int grid_min_x_{0}, grid_max_x_{0};
-  int grid_min_y_{0}, grid_max_y_{0};
-  int grid_min_z_{0}, grid_max_z_{0};
+  int grid_min_x_{0}, grid_max_x_{0}; // 2D模式下z轴固定为0
+  int grid_min_y_{0}, grid_max_y_{0};// 3D模式下z轴范围
+  int grid_min_z_{0}, grid_max_z_{0};// 3D模式下z轴范围
 };
 
 }  // namespace pnc_nav_planners

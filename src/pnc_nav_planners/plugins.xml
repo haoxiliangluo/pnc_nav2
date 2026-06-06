@@ -4,6 +4,12 @@
   </class>
 </library>
 
+<library path="astar_2d_planner">
+  <class type="pnc_nav_planners::AStar2D" base_class_type="pnc_nav_core::GlobalPlannerBase">
+    <description>Simple 2D A* global planner for Phase 1 demo</description>
+  </class>
+</library>
+
 <library path="pure_pursuit_3d_tracker">
   <class type="pnc_nav_planners::PurePursuit3D" base_class_type="pnc_nav_core::PathTrackerBase">
     <description>Pure Pursuit 3D path tracker</description>
