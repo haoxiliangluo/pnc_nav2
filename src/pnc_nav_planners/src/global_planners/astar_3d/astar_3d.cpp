@@ -211,16 +211,16 @@ nav_msgs::msg::Path AStar3D::createPlan(
   // A* 搜索
   using PQElement = std::pair<double, GridIndex>;
   auto cmp = [](const PQElement & a, const PQElement & b) { return a.first > b.first; };
-  std::priority_queue<PQElement, std::vector<PQElement>, decltype(cmp)> open_set(cmp);
+  std::priority_queue<PQElement, std::vector<PQElement>, decltype(cmp)> open_set(cmp);// 
 
-  std::unordered_map<GridIndex, double, GridIndexHash> g_score;
-  std::unordered_map<GridIndex, GridIndex, GridIndexHash> came_from;
-  std::unordered_map<GridIndex, bool, GridIndexHash> closed_set;
+  std::unordered_map<GridIndex, double, GridIndexHash> g_score;// 记录从起点到各节点的已知最小代价
+  std::unordered_map<GridIndex, GridIndex, GridIndexHash> came_from;// 记录路径回溯信息
+  std::unordered_map<GridIndex, bool, GridIndexHash> closed_set;// 记录已访问节点
 
   g_score[start_idx] = 0.0;
   open_set.push({heuristic_weight_ * heuristic(start_idx, goal_idx), start_idx});
 
-  int iterations = 0;
+  int iterations = 0; // 迭代计数器
 
   while (!open_set.empty() && iterations < max_iterations_) {
     iterations++;
@@ -262,7 +262,7 @@ nav_msgs::msg::Path AStar3D::createPlan(
       uint8_t cell_cost = costmap_->getCost(wx, wy, wz);
       double cost_factor = 1.0 + static_cast<double>(cell_cost) / 252.0;
 
-      double tentative_g = g_score[current] + move_cost * cost_factor;
+      double tentative_g = g_score[current] + move_cost * cost_factor;// 计算新的g值
 
       if (!g_score.count(neighbor) || tentative_g < g_score[neighbor]) {
         g_score[neighbor] = tentative_g;

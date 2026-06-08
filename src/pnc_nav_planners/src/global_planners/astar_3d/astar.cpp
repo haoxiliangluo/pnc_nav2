@@ -82,33 +82,56 @@ double AStar2D::heuristic(const GridIndex & a, const GridIndex & b) const
 }  
 
 // 获取邻居节点
-std::vector<GridIndex> getNeighbors(const GridIndex & current)
+std::vector<GridIndex> AStar2D::getNeighbors(const GridIndex & current) const
 {
     std::vector<GridIndex> neighbors;
     // 8-邻域
     const int dirs[][2] = {{1,0},{-1,0},{0,1},{0,-1},{1,1},{1,-1},{-1,1},{-1,-1}};
     for(const auto & dir :dirs)
     {
-        GridIndex n{current.x + dir[0], current.y + dir[1], 0};
+        GridIndex n{current.x + dir[0], current.y + dir[1]};
         neighbors.push_back(n);
     }
     return neighbors;
 }
 
   // 回溯路径
-nav_msgs::msg::Path reconstructPath(
-const std::unordered_map<GridIndex, GridIndex, GridIndexHash> & came_from,
-const GridIndex & start,
-const GridIndex & goal,
-const std_msgs::msg::Header & header)
+nav_msgs::msg::Path AStar2D::reconstructPath(
+  const std::unordered_map<GridIndex, GridIndex, GridIndexHash> & came_from,
+  const GridIndex & start,
+  const GridIndex & goal,
+  const std_msgs::msg::Header & header) const
 {
+  nav_msgs::msg::Path path;
+  path.header = header;
+  GridIndex current = goal;
+  std::vector<GridIndex> index_path;
+  while (!(current == start)) 
+  {
+    index_path.push_back(current);
+    auto it = came_from.find(current);
+    if (it == came_from.end()) break;
+    current = it->second;
+  }
+  index_path.push_back(start);
+  std::reverse(index_path.begin(), index_path.end());
+  for(const auto & idx : index_path)
+  {
+    geometry_msgs::msg::PoseStamped pose;
+    gridToWorld(idx,pose.pose.position.x,pose.pose.position.y);
+    pose.header = header;
+    pose.pose.position.z = 0.0;
+    pose.pose.orientation.w = 1.0; // 无旋转
+    path.poses.push_back(pose);
+  }
 
+
+  return smoothPath(path);
 }
 
-// 路径平滑
-nav_msgs::msg::Path smoothPath(const nav_msgs::msg::Path & raw_path)
+nav_msgs::msg::Path AStar2D::smoothPath(const nav_msgs::msg::Path & raw_path) const
 {
-
+  return raw_path;
 }
 
 nav_msgs::msg::Path AStar2D::createPlan(
@@ -117,23 +140,92 @@ nav_msgs::msg::Path AStar2D::createPlan(
 {
     nav_msgs::msg::Path empty_path;
     empty_path.header = start.header;
-// 1. 创建 empty_path
-// 2. 检查 costmap_
+    if(costmap_ == nullptr)
+    {
+      RCLCPP_ERROR(node_->get_logger(), "Costmap is not set");
+      return empty_path;
+    }
 // 3. start/goal worldToGrid
-// 4. 检查 goal 是否在障碍里
-// 5. 初始化 open_set / g_score / came_from / closed_set
-// 6. while open_set 不空
-// 7. 取 f 最小的 current
-// 8. 如果 current == goal，reconstructPath 返回
-// 9. 遍历邻居
-// 10. gridToWorld 后查 costmap
-// 11. 计算 tentative_g
-// 12. 更新 g_score / came_from / open_set
-// 13. 超过 max_iterations 返回空 path
-
+    GridIndex start_idx = worldToGrid(start.pose.position.x, start.pose.position.y);
+    GridIndex goal_idx = worldToGrid(goal.pose.position.x, goal.pose.position.y);
+// 4. 检查 goal和start是否在障碍里
+    if (!costmap_->isInBounds(start.pose.position.x, start.pose.position.y, start.pose.position.z)) {
+      RCLCPP_WARN(node_->get_logger(), "AStar2D: start out of bounds");
+      return empty_path;
+    }
+    if(costmap_->isOccupied(start.pose.position.x, start.pose.position.y, 0.0))
+    {
+      RCLCPP_WARN(node_->get_logger(), "Start is occupied");
+      return empty_path;
+    }
+    if (!costmap_->isInBounds(goal.pose.position.x, goal.pose.position.y, goal.pose.position.z)) {
+    RCLCPP_WARN(node_->get_logger(), "AStar2D: goal out of bounds");
     return empty_path;
-}
+    }
+    if(costmap_->isOccupied(goal.pose.position.x, goal.pose.position.y, 0.0))
+    {
+      RCLCPP_WARN(node_->get_logger(), "Goal is occupied");
+      return empty_path;
+    }
 
+// 5. 初始化 open_set / g_score / came_from / closed_set
+    using PQElement = std::pair<double, GridIndex>;
+    std::unordered_map<GridIndex,double,GridIndexHash> g_score;
+    std::unordered_map<GridIndex,GridIndex,GridIndexHash> came_from;
+    std::unordered_map<GridIndex,bool,GridIndexHash> closed_set;
+    auto cmp = [](const PQElement & a,const PQElement & b){return a.first > b.first;};
+    std::priority_queue<PQElement,std::vector<PQElement>,decltype(cmp)> open_set(cmp);
+    g_score[start_idx] = 0.0;
+    open_set.push({heuristic_weight_*heuristic(start_idx, goal_idx), start_idx});
+
+// 6. while open_set 不空
+    int iterations = 0;
+    while(!open_set.empty() && iterations <= max_iterations_)
+    {
+      iterations++;
+      auto current = open_set.top().second;
+      open_set.pop();
+      
+      if(current == goal_idx)
+      {
+        return reconstructPath(came_from, start_idx, goal_idx, start.header);
+      }
+      if(closed_set[current])continue;
+      closed_set[current] = true;
+      for(const auto & neighbor :getNeighbors(current))
+      {
+        if(closed_set[neighbor])continue;
+        closed_set[neighbor] = true;
+        double wx,wy;
+        gridToWorld(neighbor,wx,wy);
+
+        if(!costmap_->isInBounds(wx, wy, 0.0))continue;
+        if(!costmap_->isOccupied(wx, wy, 0.0))continue;
+        if (!allow_unknown_ && costmap_->getCost(wx, wy, 0.0) == pnc_nav_core::cost_values::UNKNOWN) {
+        continue;
+        
+        double dx = std::abs(neighbor.x - current.x);
+        double dy = std::abs(neighbor.y - current.y);
+        double move_cost = std::sqrt(dx * dx + dy * dy);// 计算移动代价
+
+        uint8_t cell_cost = costmap_->getCost(wx, wy, 0.0);
+        double cost_factor = 1.0 + static_cast<double>(cell_cost) / 252.0;
+
+        double tentative_g = g_score[current] + move_cost * cost_factor;// 计算新的g值
+        if(!g_score.count(neighbor) || tentative_g < g_score[neighbor])
+        {
+          g_score[neighbor] = tentative_g;
+          came_from[neighbor] = current;
+          double f = tentative_g + heuristic_weight_ * heuristic(neighbor, goal_idx);// 计算f值
+          open_set.push({f, neighbor});
+        }
+          
+        }
+      }
+
+    }
+    RCLCPP_WARN(node_->get_logger(), "AStar2D: no path found after %d iterations", iterations);
+    return empty_path;
 
 }// namespace pnc_nav_planners
 
