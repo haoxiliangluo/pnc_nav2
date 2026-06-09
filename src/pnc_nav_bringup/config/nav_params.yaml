@@ -12,7 +12,7 @@ nav_server:
     max_planning_retries: 3
 
     # --- 插件选择 ---
-    global_planner_plugin: "pnc_nav_planners::AStar2D"
+    global_planner_plugin: "pnc_nav_planners::AStar3D"
     path_tracker_plugin: "pnc_nav_planners::PurePursuit3D"
 
     # --- Phase 1: 简单 2D costmap ---

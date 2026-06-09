@@ -200,7 +200,7 @@ nav_msgs::msg::Path AStar2D::createPlan(
         gridToWorld(neighbor,wx,wy);
 
         if(!costmap_->isInBounds(wx, wy, 0.0))continue;
-        if(!costmap_->isOccupied(wx, wy, 0.0))continue;
+        if(costmap_->isOccupied(wx, wy, 0.0))continue;
         if (!allow_unknown_ && costmap_->getCost(wx, wy, 0.0) == pnc_nav_core::cost_values::UNKNOWN) {
         continue;
         
@@ -228,5 +228,5 @@ nav_msgs::msg::Path AStar2D::createPlan(
     return empty_path;
 
 }// namespace pnc_nav_planners
-
+}
 PLUGINLIB_EXPORT_CLASS(pnc_nav_planners::AStar2D, pnc_nav_core::GlobalPlannerBase)
