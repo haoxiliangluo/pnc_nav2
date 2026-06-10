@@ -138,8 +138,9 @@ bool NavServer::switchPathTracker(const std::string & plugin_name)
 
 void NavServer::transitionTo(NavState new_state)
 {
-  RCLCPP_INFO(get_logger(), "State transition: %d -> %d",
-    static_cast<int>(state_), static_cast<int>(new_state));
+  const char* state_names[] = {"IDLE", "PLANNING", "FOLLOWING", "RECOVERING", "SUCCEEDED", "FAILED"};
+  RCLCPP_INFO(get_logger(), "State transition: %s -> %s",
+    state_names[static_cast<int>(state_)], state_names[static_cast<int>(new_state)]);
   state_ = new_state;
 }
 

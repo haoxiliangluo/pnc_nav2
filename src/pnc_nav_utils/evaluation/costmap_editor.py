@@ -22,44 +22,45 @@ import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from matplotlib.collections import PatchCollection
 
 
 # ──────────────────────────────────────────────
-# 代价计算（复现 SimpleCostmap2D 逻辑）
+# 代价计算（向量化版本，与 SimpleCostmap2D 逻辑一致）
 # ──────────────────────────────────────────────
-
-def distance_to_box(x, y, box):
-    """点到轴对齐矩形的距离（与 C++ distanceToBox 一致）"""
-    dx = max(box[0] - x, 0.0, x - box[2])
-    dy = max(box[1] - y, 0.0, y - box[3])
-    return np.hypot(dx, dy)
-
 
 def compute_cost_grid(obstacles, origin_x, origin_y, width, height,
                       resolution, lethal_radius, inflation_radius):
-    """生成代价网格（与 SimpleCostmap2D::getCost 逻辑一致）"""
+    """生成代价网格 — numpy 向量化，比纯 Python 循环快 100+ 倍"""
     nx = int(round(width / resolution))
     ny = int(round(height / resolution))
+
+    # 构建网格中心坐标 (ny, nx)
+    ix = np.arange(nx)
+    iy = np.arange(ny)
+    cx = origin_x + (ix + 0.5) * resolution   # (nx,)
+    cy = origin_y + (iy + 0.5) * resolution   # (ny,)
+    grid_x, grid_y = np.meshgrid(cx, cy)       # (ny, nx)
+
+    if not obstacles:
+        return np.zeros((ny, nx), dtype=np.float64)
+
+    # 计算每个格子到所有障碍物的距离，取最小值
+    min_dist = np.full((ny, nx), np.inf)
+    for (min_bx, min_by, max_bx, max_by) in obstacles:
+        # 点到轴对齐矩形的距离（向量化）
+        dx = np.maximum(np.maximum(min_bx - grid_x, 0.0), grid_x - max_bx)
+        dy = np.maximum(np.maximum(min_by - grid_y, 0.0), grid_y - max_by)
+        dist = np.hypot(dx, dy)
+        min_dist = np.minimum(min_dist, dist)
+
+    # 代价赋值
     grid = np.zeros((ny, nx), dtype=np.float64)
+    lethal_mask = min_dist <= lethal_radius
+    inflation_mask = (~lethal_mask) & (min_dist <= inflation_radius)
 
-    for iy in range(ny):
-        for ix in range(nx):
-            x = origin_x + (ix + 0.5) * resolution
-            y = origin_y + (iy + 0.5) * resolution
-
-            if not obstacles:
-                grid[iy, ix] = 0.0
-                continue
-
-            dist = min(distance_to_box(x, y, b) for b in obstacles)
-            if dist <= lethal_radius:
-                grid[iy, ix] = 254.0  # LETHAL
-            elif dist <= inflation_radius:
-                ratio = 1.0 - (dist - lethal_radius) / max(1e-6, inflation_radius - lethal_radius)
-                grid[iy, ix] = np.clip(180.0 * ratio, 1.0, 180.0)
-            else:
-                grid[iy, ix] = 0.0  # FREE_SPACE
+    grid[lethal_mask] = 254.0
+    ratio = 1.0 - (min_dist[inflation_mask] - lethal_radius) / max(1e-6, inflation_radius - lethal_radius)
+    grid[inflation_mask] = np.clip(180.0 * ratio, 1.0, 180.0)
 
     return grid
 
@@ -83,8 +84,13 @@ class CostmapEditor:
         self.drag_start = None
         self.drag_rect = None
 
+        # 预计算坐标网格（只算一次，用于 imshow extent）
+        self.extent = [origin_x, origin_x + width,
+                       origin_y, origin_y + height]
+
         self._setup_figure()
-        self._redraw()
+        self._draw_heatmap()   # 初始画一次热力图
+        self._draw_overlays()  # 画障碍物矩形
 
     def _setup_figure(self):
         self.fig, self.ax = plt.subplots(1, 1, figsize=(10, 10))
@@ -103,38 +109,50 @@ class CostmapEditor:
         self.fig.canvas.mpl_connect('motion_notify_event', self._on_motion)
         self.fig.canvas.mpl_connect('key_press_event', self._on_key)
 
-    def _redraw(self):
-        self.ax.cla()
-        self.ax.set_title(
-            f'障碍物: {len(self.obstacles)} | 左键拖拽画 | 右键删 | s保存 | c清空 | q退出')
-        self.ax.set_xlabel('X (m)')
-        self.ax.set_ylabel('Y (m)')
-        self.ax.set_aspect('equal')
-        self.ax.set_xlim(self.origin_x, self.origin_x + self.width)
-        self.ax.set_ylim(self.origin_y, self.origin_y + self.height)
-        self.ax.grid(True, alpha=0.3)
+    # ── 分层绘制：热力图只在障碍物变化时重算，overlay 每次轻量刷新 ──
 
-        # 画代价热力图
+    def _draw_heatmap(self):
+        """重算并绘制代价热力图（只在障碍物增删时调用）"""
+        # 移除旧的热力图
+        if hasattr(self, '_heatmap') and self._heatmap is not None:
+            self._heatmap.remove()
+
         cost_grid = compute_cost_grid(
             self.obstacles, self.origin_x, self.origin_y,
             self.width, self.height, self.resolution,
             self.lethal_radius, self.inflation_radius)
 
-        extent = [self.origin_x, self.origin_x + self.width,
-                  self.origin_y, self.origin_y + self.height]
-        self.ax.imshow(cost_grid.T, origin='lower', extent=extent,
-                       cmap='RdYlGn_r', vmin=0, vmax=254, alpha=0.6,
-                       interpolation='bilinear')
+        self._heatmap = self.ax.imshow(
+            cost_grid, origin='lower', extent=self.extent,
+            cmap='RdYlGn_r', vmin=0, vmax=254, alpha=0.6,
+            interpolation='bilinear', zorder=0)
 
-        # 画障碍物矩形
+    def _draw_overlays(self):
+        """重绘障碍物矩形和标题（轻量操作）"""
+        # 移除旧的矩形
+        if hasattr(self, '_obstacle_patches'):
+            for p in self._obstacle_patches:
+                p.remove()
+        self._obstacle_patches = []
+
         for box in self.obstacles:
             min_x, min_y, max_x, max_y = box
             rect = Rectangle((min_x, min_y), max_x - min_x, max_y - min_y,
                               linewidth=2, edgecolor='red', facecolor='darkred',
-                              alpha=0.8)
+                              alpha=0.8, zorder=2)
             self.ax.add_patch(rect)
+            self._obstacle_patches.append(rect)
 
+        self.ax.set_title(
+            f'障碍物: {len(self.obstacles)} | 左键拖拽画 | 右键删 | s保存 | c清空 | q退出')
         self.fig.canvas.draw_idle()
+
+    def _full_redraw(self):
+        """障碍物变化后：重算热力图 + 重绘 overlay"""
+        self._draw_heatmap()
+        self._draw_overlays()
+
+    # ── 事件处理 ──
 
     def _on_press(self, event):
         if event.inaxes != self.ax:
@@ -145,9 +163,9 @@ class CostmapEditor:
             self._delete_nearest(event.xdata, event.ydata)
 
     def _on_motion(self, event):
+        # 拖拽时只更新临时矩形，不重算热力图
         if self.drag_start is None or event.inaxes != self.ax:
             return
-        # 画临时矩形
         if self.drag_rect is not None:
             self.drag_rect.remove()
         x0, y0 = self.drag_start
@@ -157,49 +175,55 @@ class CostmapEditor:
         self.drag_rect = Rectangle((min_x, min_y), max_x - min_x, max_y - min_y,
                                     linewidth=2, edgecolor='blue',
                                     facecolor='blue', alpha=0.3,
-                                    linestyle='--')
+                                    linestyle='--', zorder=3)
         self.ax.add_patch(self.drag_rect)
         self.fig.canvas.draw_idle()
 
     def _on_release(self, event):
-        if self.drag_start is None or event.inaxes != self.ax:
-            self.drag_start = None
+        if self.drag_start is None:
             return
         x0, y0 = self.drag_start
-        x1, y1 = event.xdata, event.ydata
         self.drag_start = None
+
+        # 移除临时矩形
         if self.drag_rect is not None:
             self.drag_rect.remove()
             self.drag_rect = None
 
+        # 如果鼠标释放不在 axes 内，用事件坐标可能为 None
+        if event.inaxes != self.ax or event.xdata is None:
+            self.fig.canvas.draw_idle()
+            return
+
+        x1, y1 = event.xdata, event.ydata
         min_x, max_x = min(x0, x1), max(x0, x1)
         min_y, max_y = min(y0, y1), max(y0, y1)
 
         # 忽略太小的矩形（可能是误触）
         if max_x - min_x < self.resolution * 2 or max_y - min_y < self.resolution * 2:
+            self.fig.canvas.draw_idle()
             return
 
         self.obstacles.append((min_x, min_y, max_x, max_y))
-        self._redraw()
+        self._full_redraw()
 
     def _delete_nearest(self, x, y):
         if not self.obstacles:
             return
-        # 找中心距离最近的障碍物
         best_idx = min(range(len(self.obstacles)),
                        key=lambda i: ((self.obstacles[i][0] + self.obstacles[i][2]) / 2 - x) ** 2 +
                                      ((self.obstacles[i][1] + self.obstacles[i][3]) / 2 - y) ** 2)
         self.obstacles.pop(best_idx)
-        self._redraw()
+        self._full_redraw()
 
     def _on_key(self, event):
         if event.key == 'q':
             plt.close(self.fig)
         elif event.key == 'c':
             self.obstacles.clear()
-            self._redraw()
+            self._full_redraw()
         elif event.key == 'r':
-            self._redraw()
+            self._full_redraw()
         elif event.key == 's':
             self._export_yaml()
 
@@ -223,7 +247,6 @@ class CostmapEditor:
         print(yaml_text)
         print('=' * 50)
 
-        # 同时保存到文件
         output_file = 'costmap_obstacles.yaml'
         with open(output_file, 'w') as f:
             f.write(yaml_text + '\n')

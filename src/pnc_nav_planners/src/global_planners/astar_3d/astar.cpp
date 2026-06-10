@@ -62,7 +62,6 @@ GridIndex AStar2D::worldToGrid(double x, double y) const
   GridIndex idx;
   idx.x = static_cast<int>(std::floor(x / resolution_));
   idx.y = static_cast<int>(std::floor(y / resolution_));
-
   return idx;
 }
 
@@ -74,11 +73,11 @@ void AStar2D::gridToWorld(const GridIndex & idx, double & x, double & y) const
 double AStar2D::heuristic(const GridIndex & a, const GridIndex & b) const
 {
   // 使用欧几里得距离作为启发式函数（8邻域）
-  return std::sqrt((a.x -b.x) * (a.x -b.x) + (a.y -b.y) * (a.y -b.y)) * resolution_;
+  //return std::sqrt((a.x -b.x) * (a.x -b.x) + (a.y -b.y) * (a.y -b.y)) * resolution_;
   // 也可以使用曼哈顿距离（四邻域）： 
   //  return (std::abs(a.x - b.x) + std::abs(a.y - b.y)) * resolution_;
   //  octile距离（八邻域）： 
-  //  return std::max(std::abs(a.x -b.x),std::abs(a.y - b.y))*resolution_ +std::min(std::abs(a.x -b.x),std::abs(a.y - b.y))*resolution_*(std::sqrt(2)-1);
+  return std::max(std::abs(a.x -b.x),std::abs(a.y - b.y))*resolution_ +std::min(std::abs(a.x -b.x),std::abs(a.y - b.y))*resolution_*(std::sqrt(2)-1);
 }  
 
 // 获取邻居节点
@@ -195,15 +194,15 @@ nav_msgs::msg::Path AStar2D::createPlan(
       for(const auto & neighbor :getNeighbors(current))
       {
         if(closed_set[neighbor])continue;
-        closed_set[neighbor] = true;
+        // closed_set[neighbor] = true;邻居没遍历就访问,放在这里会导致部分节点被错误标记为已访问，无法正确处理路径回退和多路径选择的情况。
         double wx,wy;
         gridToWorld(neighbor,wx,wy);
 
         if(!costmap_->isInBounds(wx, wy, 0.0))continue;
         if(costmap_->isOccupied(wx, wy, 0.0))continue;
-        if (!allow_unknown_ && costmap_->getCost(wx, wy, 0.0) == pnc_nav_core::cost_values::UNKNOWN) {
-        continue;
-        
+        if (!allow_unknown_ && costmap_->getCost(wx, wy, 0.0) == pnc_nav_core::cost_values::UNKNOWN) 
+        {continue;
+        }        
         double dx = std::abs(neighbor.x - current.x);
         double dy = std::abs(neighbor.y - current.y);
         double move_cost = std::sqrt(dx * dx + dy * dy);// 计算移动代价
@@ -219,14 +218,14 @@ nav_msgs::msg::Path AStar2D::createPlan(
           double f = tentative_g + heuristic_weight_ * heuristic(neighbor, goal_idx);// 计算f值
           open_set.push({f, neighbor});
         }
-          
-        }
       }
 
     }
     RCLCPP_WARN(node_->get_logger(), "AStar2D: no path found after %d iterations", iterations);
     return empty_path;
 
-}// namespace pnc_nav_planners
 }
+
+}  // namespace pnc_nav_planners
+
 PLUGINLIB_EXPORT_CLASS(pnc_nav_planners::AStar2D, pnc_nav_core::GlobalPlannerBase)

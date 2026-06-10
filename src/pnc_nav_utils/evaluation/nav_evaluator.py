@@ -5,14 +5,13 @@
 评估指标：
 - 路径长度 (m)
 - 路径平滑度 (曲率积分)
-- 规划耗时 (ms)
-- 成功率 (%)
-- 到达时间 (s)
-- 横向跟踪误差 (m)
+- 实际行驶距离 (m)
+- 总导航时间 (s)
+- 高度变化 (m)
 
-用法:
-  ros2 run pnc_nav_utils nav_evaluator --ros-args -p bag_file:=<path>
-  ros2 run pnc_nav_utils nav_evaluator --ros-args -p live:=true
+用法（在线模式，实时评估）:
+  python3 src/pnc_nav_utils/evaluation/nav_evaluator.py
+  # Ctrl+C 退出时保存结果到 nav_benchmark.csv
 """
 
 import math
@@ -126,6 +125,12 @@ class NavEvaluator(Node):
 
     def global_plan_callback(self, msg: Path):
         """收到全局路径时记录"""
+        # 保存前一次的结果
+        if self.nav_start_time is not None:
+            self.current_metrics.total_time_s = time.time() - self.nav_start_time
+            self.results.append(self.current_metrics)
+
+        # 开始新的评估
         self.current_metrics = NavMetrics()
         self.current_metrics.path_length = compute_path_length(msg)
         self.current_metrics.smoothness = compute_smoothness(msg)
@@ -150,16 +155,22 @@ class NavEvaluator(Node):
 
     def save_results(self):
         """保存评估结果到CSV"""
-        output_file = self.get_parameter('output_file').get_parameter_value().string_value
+        # 保存当前正在进行的评估
+        if self.nav_start_time is not None:
+            self.current_metrics.total_time_s = time.time() - self.nav_start_time
+            self.results.append(self.current_metrics)
+
+        if not self.results:
+            self.get_logger().warn('没有评估数据，跳过保存')
+            return
+
+        output_file = self.get_parameter('output_file').value
         with open(output_file, 'w') as f:
-            f.write('trial,path_length,actual_distance,planning_time_ms,'
-                    'total_time_s,smoothness,cross_track_error_avg,success,height_change\n')
+            f.write('trial,path_length,actual_distance,total_time_s,smoothness,height_change\n')
             for i, m in enumerate(self.results):
                 f.write(f'{i},{m.path_length:.3f},{m.actual_distance:.3f},'
-                        f'{m.planning_time_ms:.1f},{m.total_time_s:.1f},'
-                        f'{m.smoothness:.4f},{m.cross_track_error_avg:.4f},'
-                        f'{m.success},{m.height_change:.3f}\n')
-        self.get_logger().info(f'Results saved to {output_file}')
+                        f'{m.total_time_s:.1f},{m.smoothness:.4f},{m.height_change:.3f}\n')
+        self.get_logger().info(f'Results saved to {output_file} ({len(self.results)} trials)')
 
 
 def main(args=None):

@@ -1,3 +1,5 @@
+#ifndef PNC_NAV_PLANNERS__GLOBAL_PLANNERS__ASTAR_HPP_
+#define PNC_NAV_PLANNERS__GLOBAL_PLANNERS__ASTAR_HPP_
 #include <memory>
 #include <string>
 #include <vector>
@@ -89,3 +91,4 @@ class AStar2D : public pnc_nav_core::GlobalPlannerBase
 };
 
 }
+#endif  // PNC_NAV_PLANNERS__GLOBAL_PLANNERS__ASTAR_HPP_;

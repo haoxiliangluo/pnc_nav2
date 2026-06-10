@@ -23,7 +23,10 @@ C++ 全局规划器可视化测试工具
 """
 
 import argparse
+import atexit
 import math
+import os
+import signal
 import sys
 import time
 from typing import List, Optional, Tuple
@@ -42,6 +45,44 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 from geometry_msgs.msg import PoseStamped, TransformStamped
 from nav_msgs.msg import Path
 from tf2_ros import TransformBroadcaster
+
+
+# ──────────────────────────────────────────────
+# 全局 ROS 清理（防止卡死）
+# ──────────────────────────────────────────────
+
+_ros_node = None
+_ros_initialized = False
+
+
+def _cleanup_ros():
+    """atexit 备份：确保 ROS2 资源被释放"""
+    global _ros_node, _ros_initialized
+    if _ros_node is not None:
+        try:
+            _ros_node.destroy_node()
+        except Exception:
+            pass
+        _ros_node = None
+    if _ros_initialized:
+        try:
+            rclpy.shutdown()
+        except Exception:
+            pass
+        _ros_initialized = False
+
+
+atexit.register(_cleanup_ros)
+
+
+def _signal_handler(signum, frame):
+    """Ctrl+C 信号处理：强制退出"""
+    print('\n[Ctrl+C] 正在退出...')
+    _cleanup_ros()
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, _signal_handler)
 
 
 # ──────────────────────────────────────────────
@@ -66,28 +107,32 @@ class CostmapVisualizer:
         self.ny = int(round(height / resolution))
         self.cost_grid = self._build_cost_grid()
 
-    def _distance_to_box(self, x, y, box):
-        dx = max(box[0] - x, 0.0, x - box[2])
-        dy = max(box[1] - y, 0.0, y - box[3])
-        return math.hypot(dx, dy)
-
     def _build_cost_grid(self):
+        """向量化构建代价网格"""
+        ix = np.arange(self.nx)
+        iy = np.arange(self.ny)
+        cx = self.origin_x + (ix + 0.5) * self.resolution
+        cy = self.origin_y + (iy + 0.5) * self.resolution
+        grid_x, grid_y = np.meshgrid(cx, cy)
+
+        if not self.obstacles:
+            return np.zeros((self.ny, self.nx), dtype=np.float64)
+
+        min_dist = np.full((self.ny, self.nx), np.inf)
+        for (min_bx, min_by, max_bx, max_by) in self.obstacles:
+            dx = np.maximum(np.maximum(min_bx - grid_x, 0.0), grid_x - max_bx)
+            dy = np.maximum(np.maximum(min_by - grid_y, 0.0), grid_y - max_by)
+            dist = np.hypot(dx, dy)
+            min_dist = np.minimum(min_dist, dist)
+
         grid = np.zeros((self.ny, self.nx), dtype=np.float64)
-        for iy in range(self.ny):
-            for ix in range(self.nx):
-                x = self.origin_x + (ix + 0.5) * self.resolution
-                y = self.origin_y + (iy + 0.5) * self.resolution
-                if not self.obstacles:
-                    grid[iy, ix] = 0.0
-                    continue
-                dist = min(self._distance_to_box(x, y, b) for b in self.obstacles)
-                if dist <= self.lethal_radius:
-                    grid[iy, ix] = 254.0
-                elif dist <= self.inflation_radius:
-                    ratio = 1.0 - (dist - self.lethal_radius) / max(1e-6, self.inflation_radius - self.lethal_radius)
-                    grid[iy, ix] = np.clip(180.0 * ratio, 1.0, 180.0)
-                else:
-                    grid[iy, ix] = 0.0
+        lethal_mask = min_dist <= self.lethal_radius
+        inflation_mask = (~lethal_mask) & (min_dist <= self.inflation_radius)
+
+        grid[lethal_mask] = 254.0
+        ratio = 1.0 - (min_dist[inflation_mask] - self.lethal_radius) / \
+                max(1e-6, self.inflation_radius - self.lethal_radius)
+        grid[inflation_mask] = np.clip(180.0 * ratio, 1.0, 180.0)
         return grid
 
 
@@ -141,7 +186,7 @@ class PlannerTestNode(Node):
         goal.pose.position.z = 0.0
         goal.pose.orientation.w = 1.0
         self.goal_pub.publish(goal)
-        self.latest_path = None  # 清除旧路径
+        self.latest_path = None
         self.get_logger().info(f'发送目标: ({x:.2f}, {y:.2f})，等待 C++ 规划器响应...')
 
     def _plan_callback(self, msg: Path):
@@ -150,7 +195,6 @@ class PlannerTestNode(Node):
         self.path_timestamp = time.time()
         n = len(msg.poses)
         if n > 0:
-            # 计算路径长度
             length = 0.0
             for i in range(n - 1):
                 dx = msg.poses[i+1].pose.position.x - msg.poses[i].pose.position.x
@@ -173,42 +217,71 @@ class PlannerTesterVisualizer:
         self.node = node
         self.costmap = CostmapVisualizer(**costmap_cfg)
 
-        self.start_pos = None   # (x, y)
-        self.goal_pos = None    # (x, y)
-        self.cpp_path = None    # [(x,y), ...] from C++ planner
+        self.start_pos = None
+        self.goal_pos = None
+        self.cpp_path = None
+        self._closed = False
 
         self._setup_figure()
-        self._redraw()
+
+        # 画一次热力图（不会变，不需要重画）
+        cm = self.costmap
+        extent = [cm.origin_x, cm.origin_x + cm.width,
+                  cm.origin_y, cm.origin_y + cm.height]
+        self._heatmap = self.ax.imshow(
+            cm.cost_grid, origin='lower', extent=extent,
+            cmap='RdYlGn_r', vmin=0, vmax=254, alpha=0.7,
+            interpolation='bilinear', zorder=0)
+
+        # 障碍物轮廓（不会变）
+        for box in cm.obstacles:
+            min_x, min_y, max_x, max_y = box
+            rect = Rectangle((min_x, min_y), max_x - min_x, max_y - min_y,
+                              linewidth=2, edgecolor='darkred', facecolor='none',
+                              linestyle='-', zorder=1)
+            self.ax.add_patch(rect)
+
+        self._update_overlays()
 
     def _setup_figure(self):
         self.fig, self.ax = plt.subplots(1, 1, figsize=(12, 10))
         self.fig.canvas.manager.set_window_title('C++ AStar2D 规划器测试')
-        self.ax.set_title('左键=Start | 右键=Goal(触发C++规划) | c=清除 | q=退出')
-        self.ax.set_xlabel('X (m)')
-        self.ax.set_ylabel('Y (m)')
-        self.ax.set_aspect('equal')
 
         cm = self.costmap
         self.ax.set_xlim(cm.origin_x, cm.origin_x + cm.width)
         self.ax.set_ylim(cm.origin_y, cm.origin_y + cm.height)
+        self.ax.set_aspect('equal')
         self.ax.grid(True, alpha=0.2)
+        self.ax.set_xlabel('X (m)')
+        self.ax.set_ylabel('Y (m)')
 
         self.fig.canvas.mpl_connect('button_press_event', self._on_click)
         self.fig.canvas.mpl_connect('key_press_event', self._on_key)
+        self.fig.canvas.mpl_connect('close_event', self._on_close)
 
-        # 定时器：轮询 ROS2 回调 + 检查新路径
-        self.timer = self.fig.canvas.new_timer(interval=50)  # 50ms = 20Hz
+        # 定时器：轮询 ROS2 回调
+        self.timer = self.fig.canvas.new_timer(interval=50)
         self.timer.add_callback(self._ros_spin)
         self.timer.start()
 
+    def _on_close(self, event=None):
+        """窗口关闭事件"""
+        self._closed = True
+        self.timer.stop()
+        _cleanup_ros()
+
     def _ros_spin(self):
         """定时处理 ROS2 回调并检查新路径"""
-        rclpy.spin_once(self.node, timeout_sec=0)
+        if self._closed:
+            return
+        try:
+            rclpy.spin_once(self.node, timeout_sec=0)
+        except Exception:
+            return
 
-        # 检查是否有新路径
         if self.node.latest_path is not None:
             path_msg = self.node.latest_path
-            self.node.latest_path = None  # 消费掉
+            self.node.latest_path = None
 
             if len(path_msg.poses) > 0:
                 self.cpp_path = [
@@ -220,51 +293,39 @@ class PlannerTesterVisualizer:
                 self.cpp_path = []
                 print('[C++ AStar2D] 规划失败: 返回空路径')
 
-            self._redraw()
+            self._update_overlays()
 
-    def _redraw(self):
-        self.ax.cla()
-
-        cm = self.costmap
-        self.ax.set_xlim(cm.origin_x, cm.origin_x + cm.width)
-        self.ax.set_ylim(cm.origin_y, cm.origin_y + cm.height)
-        self.ax.set_aspect('equal')
-        self.ax.grid(True, alpha=0.2)
-        self.ax.set_xlabel('X (m)')
-        self.ax.set_ylabel('Y (m)')
-
-        # 代价热力图
-        extent = [cm.origin_x, cm.origin_x + cm.width,
-                  cm.origin_y, cm.origin_y + cm.height]
-        self.ax.imshow(cm.cost_grid.T, origin='lower', extent=extent,
-                       cmap='RdYlGn_r', vmin=0, vmax=254, alpha=0.7,
-                       interpolation='bilinear')
-
-        # 障碍物轮廓
-        for box in cm.obstacles:
-            min_x, min_y, max_x, max_y = box
-            rect = Rectangle((min_x, min_y), max_x - min_x, max_y - min_y,
-                              linewidth=2, edgecolor='darkred', facecolor='none',
-                              linestyle='-')
-            self.ax.add_patch(rect)
+    def _update_overlays(self):
+        """轻量更新：只刷新 start/goal 标记和路径线，不动热力图"""
+        # 移除旧的 overlay artists
+        if hasattr(self, '_overlay_artists'):
+            for artist in self._overlay_artists:
+                try:
+                    artist.remove()
+                except ValueError:
+                    pass
+        self._overlay_artists = []
 
         # C++ 规划器返回的路径
         if self.cpp_path and len(self.cpp_path) > 1:
             px = [p[0] for p in self.cpp_path]
             py = [p[1] for p in self.cpp_path]
-            self.ax.plot(px, py, 'w-', linewidth=2.5, zorder=5,
-                         label=f'C++ A* 路径 ({len(self.cpp_path)}点)')
-            self.ax.plot(px, py, 'o', color='yellow', markersize=3, zorder=6)
+            line, = self.ax.plot(px, py, 'w-', linewidth=2.5, zorder=5,
+                                 label=f'C++ A* 路径 ({len(self.cpp_path)}点)')
+            dots, = self.ax.plot(px, py, 'o', color='yellow', markersize=3, zorder=6)
+            self._overlay_artists.extend([line, dots])
 
-        # start / goal
+        # start / goal 标记
         if self.start_pos:
-            self.ax.plot(self.start_pos[0], self.start_pos[1], '^',
-                         color='lime', markersize=15, markeredgecolor='black',
-                         markeredgewidth=1.5, zorder=10, label='Start')
+            s, = self.ax.plot(self.start_pos[0], self.start_pos[1], '^',
+                              color='lime', markersize=15, markeredgecolor='black',
+                              markeredgewidth=1.5, zorder=10, label='Start')
+            self._overlay_artists.append(s)
         if self.goal_pos:
-            self.ax.plot(self.goal_pos[0], self.goal_pos[1], '*',
-                         color='red', markersize=18, markeredgecolor='black',
-                         markeredgewidth=1.5, zorder=10, label='Goal')
+            g, = self.ax.plot(self.goal_pos[0], self.goal_pos[1], '*',
+                              color='red', markersize=18, markeredgecolor='black',
+                              markeredgewidth=1.5, zorder=10, label='Goal')
+            self._overlay_artists.append(g)
 
         # 标题
         title = '左键=Start | 右键=Goal(触发C++规划) | c=清除 | q=退出'
@@ -291,7 +352,7 @@ class PlannerTesterVisualizer:
             self.cpp_path = None
             self.node.publish_start_tf(self.start_pos[0], self.start_pos[1])
             print(f'[Start] ({self.start_pos[0]:.2f}, {self.start_pos[1]:.2f})')
-            self._redraw()
+            self._update_overlays()
 
         elif event.button == 3:  # 右键：设置 goal，触发 C++ 规划器
             self.goal_pos = (event.xdata, event.ydata)
@@ -299,39 +360,47 @@ class PlannerTesterVisualizer:
 
             if not self.start_pos:
                 print('[提示] 请先左键设置 Start 点')
-                self._redraw()
+                self._update_overlays()
                 return
 
-            # 持续发布 TF（确保 NavServer 能拿到起点）
             self.node.publish_start_tf(self.start_pos[0], self.start_pos[1])
-            # 发送目标，触发 C++ AStar2D 规划器
             self.node.send_goal(self.goal_pos[0], self.goal_pos[1])
             print(f'[Goal]  ({self.goal_pos[0]:.2f}, {self.goal_pos[1]:.2f}) → 等待 C++ 规划器...')
-            self._redraw()
+            self._update_overlays()
 
     def _on_key(self, event):
         if event.key == 'q':
+            self._closed = True
+            self.timer.stop()
             plt.close(self.fig)
         elif event.key == 'c':
             self.start_pos = None
             self.goal_pos = None
             self.cpp_path = None
             print('[清除] 已清除所有标记和路径')
-            self._redraw()
+            self._update_overlays()
 
 
 # ──────────────────────────────────────────────
 # 配置读取
 # ──────────────────────────────────────────────
 
-def load_costmap_config(config_path: str) -> dict:
-    with open(config_path, 'r') as f:
-        data = yaml.safe_load(f)
+def _find_project_root() -> Optional[str]:
+    """从当前目录向上查找项目根目录"""
+    import os
+    current = os.getcwd()
+    for _ in range(5):
+        if os.path.exists(os.path.join(current, 'src', 'pnc_nav_bringup')):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    return None
 
-    params = data.get('nav_server', {}).get('ros__parameters', {})
-    cm = params.get('costmap', {})
 
-    raw_obs = cm.get('obstacles', [])
+def _parse_obstacles(raw_obs: list) -> list:
+    """将 [min_x, min_y, max_x, max_y, ...] 平坦列表转为 [(min_x,min_y,max_x,max_y), ...]"""
     obstacles = []
     for i in range(0, len(raw_obs) - 3, 4):
         obstacles.append((
@@ -340,6 +409,26 @@ def load_costmap_config(config_path: str) -> dict:
             max(raw_obs[i], raw_obs[i + 2]),
             max(raw_obs[i + 1], raw_obs[i + 3]),
         ))
+    return obstacles
+
+
+def load_costmap_config(config_path: str, obstacles_yaml: str = None) -> dict:
+    with open(config_path, 'r') as f:
+        data = yaml.safe_load(f)
+
+    params = data.get('nav_server', {}).get('ros__parameters', {})
+    cm = params.get('costmap', {})
+
+    obstacles = _parse_obstacles(cm.get('obstacles', []))
+
+    # --obstacles-yaml 覆盖：用 costmap_editor 导出的障碍物替换
+    if obstacles_yaml is not None:
+        with open(obstacles_yaml, 'r') as f:
+            obs_data = yaml.safe_load(f)
+        raw_obs = obs_data.get('obstacles', [])
+        if raw_obs:
+            obstacles = _parse_obstacles(raw_obs)
+            print(f'[--obstacles-yaml] 已从 {obstacles_yaml} 加载 {len(obstacles)} 个障碍物（覆盖 nav_params.yaml）')
 
     return dict(
         origin_x=cm.get('origin_x', -5.0),
@@ -358,18 +447,31 @@ def load_costmap_config(config_path: str) -> dict:
 # ──────────────────────────────────────────────
 
 def main():
+    global _ros_node, _ros_initialized
+
     parser = argparse.ArgumentParser(
         description='C++ AStar2D 规划器可视化测试工具')
-    parser.add_argument('--config', type=str,
-                        default='src/pnc_nav_bringup/config/nav_params.yaml',
-                        help='nav_params.yaml 配置文件路径')
+    parser.add_argument('--config', type=str, default=None,
+                        help='nav_params.yaml 配置文件路径（默认自动查找）')
+    parser.add_argument('--obstacles-yaml', type=str, default=None,
+                        help='costmap_editor 导出的障碍物 YAML 文件（覆盖 nav_params.yaml 中的 obstacles）')
     args = parser.parse_args()
+
+    # 自动查找配置文件
+    config_path = args.config
+    if config_path is None:
+        project_root = _find_project_root()
+        if project_root:
+            config_path = os.path.join(project_root, 'src/pnc_nav_bringup/config/nav_params.yaml')
+        else:
+            config_path = 'src/pnc_nav_bringup/config/nav_params.yaml'
 
     # 加载配置
     try:
-        costmap_cfg = load_costmap_config(args.config)
+        costmap_cfg = load_costmap_config(config_path, args.obstacles_yaml)
     except FileNotFoundError:
-        print(f'错误: 找不到配置文件 {args.config}')
+        print(f'错误: 找不到配置文件 {config_path}')
+        print('提示: 请从项目根目录运行，或使用 --config 参数指定配置文件路径')
         sys.exit(1)
     except Exception as e:
         print(f'错误: 解析配置文件失败: {e}')
@@ -382,7 +484,9 @@ def main():
 
     # 初始化 ROS2
     rclpy.init()
+    _ros_initialized = True
     node = PlannerTestNode()
+    _ros_node = node
 
     print('='*50)
     print('C++ AStar2D 规划器测试工具')
@@ -394,17 +498,17 @@ def main():
     print('  左键点击 → 设置 start 点 (发布 TF)')
     print('  右键点击 → 设置 goal 点 (触发 C++ 规划器)')
     print('  c 键 → 清除')
-    print('  q 键 → 退出')
+    print('  q 键 / 关闭窗口 / Ctrl+C → 退出')
     print('='*50)
     print()
 
-    # 启动可视化
-    viz = PlannerTesterVisualizer(node, costmap_cfg)
-    plt.show()
-
-    # 清理
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        viz = PlannerTesterVisualizer(node, costmap_cfg)
+        plt.show()
+    except KeyboardInterrupt:
+        print('\n[Ctrl+C] 正在退出...')
+    finally:
+        _cleanup_ros()
 
 
 if __name__ == '__main__':
