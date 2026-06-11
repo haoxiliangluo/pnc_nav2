@@ -27,7 +27,7 @@ set(dependencies
 # Navigation server library
 add_library(nav_server SHARED
   src/nav_server.cpp
-  src/simple_costmap_2d.cpp
+  src/nav2_costmap_adapter.cpp
 )
 target_include_directories(nav_server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

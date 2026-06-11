@@ -5,7 +5,7 @@
 
 #include <chrono>
 
-#include "pnc_nav_core/simple_costmap_2d.hpp"
+#include "pnc_nav_core/nav2_costmap_adapter.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace pnc_nav_core
@@ -50,8 +50,8 @@ void NavServer::initialize()
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  // Phase 1: 手写轻量 2D costmap, 用于验证 A* + Pure Pursuit 闭环。
-  costmap_ = std::make_shared<SimpleCostmap2D>(shared_from_this());
+  // 使用Nav2 costmap adapter订阅/map
+  costmap_ = std::make_shared<Nav2CostmapAdapter>(shared_from_this());
 
   // 发布者
   global_plan_pub_ = create_publisher<nav_msgs::msg::Path>("global_plan", 10);

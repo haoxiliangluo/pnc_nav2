@@ -1,16 +1,19 @@
 import os
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
 def generate_launch_description():
-    """3D仿真完整导航启动文件 — 机器狗 + 3D环境"""
+    """3D仿真完整导航启动文件 — Go2机器狗 + Velodyne + LIO-SAM"""
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     nav_params_file = LaunchConfiguration('params_file')
+    rviz_arg = LaunchConfiguration('rviz')
 
     default_params = PathJoinSubstitution([
         FindPackageShare('pnc_nav_bringup'), 'config', 'nav_params.yaml'
@@ -27,25 +30,33 @@ def generate_launch_description():
             description='Navigation parameters file'
         ),
         DeclareLaunchArgument(
-            'world', default_value='multi_floor',
-            description='Gazebo world (multi_floor, outdoor_terrain, stairs)'
-        ),
-        DeclareLaunchArgument(
-            'robot_model', default_value='go2',
-            description='Robot model (go2, a1, custom)'
+            'rviz', default_value='true',
+            description='Launch RViz'
         ),
 
-        # --- Gazebo 仿真 (3D世界 + 机器狗) ---
-        # TODO: IncludeLaunchDescription for gazebo world + quadruped spawn
+        # --- Gazebo仿真 (Go2 + Velodyne激光雷达) ---
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('go2_config'),
+                    'launch',
+                    'gazebo_velodyne.launch.py'
+                ])
+            ]),
+            launch_arguments={'rviz': 'false'}.items()
+        ),
 
-        # --- LiDAR 里程计 (Fast-LIO2) ---
-        # TODO: Node for lidar odometry
-
-        # --- 地图服务 (OctoMap) ---
-        # TODO: Node for octomap_server
-
-        # --- 可通行性分析 ---
-        # TODO: Node for traversability analysis
+        # --- LIO-SAM (激光惯性里程计 + 3D SLAM) ---
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([
+                PathJoinSubstitution([
+                    FindPackageShare('lio_sam'),
+                    'launch',
+                    'lidar.launch.py'
+                ])
+            ]),
+            launch_arguments={'rviz': 'false'}.items()
+        ),
 
         # --- 导航服务器 (3D模式) ---
         Node(
@@ -58,20 +69,18 @@ def generate_launch_description():
                 {'use_sim_time': use_sim_time}
             ],
             remappings=[
-                ('cmd_vel', '/locomotion/cmd_vel'),
+                ('cmd_vel', '/cmd_vel'),
             ]
         ),
 
-        # --- 步态控制器 ---
-        # TODO: Node for locomotion controller (RL policy inference)
-
-        # --- RViz ---
+        # --- RViz (可选) ---
         Node(
             package='rviz2',
             executable='rviz2',
             name='rviz2',
+            condition=IfCondition(rviz_arg),
             arguments=['-d', PathJoinSubstitution([
-                FindPackageShare('pnc_nav_bringup'), 'rviz', 'nav_3d.rviz'
+                FindPackageShare('pnc_nav_bringup'), 'rviz', 'nav_view.rviz'
             ])],
             parameters=[{'use_sim_time': use_sim_time}]
         ),
