@@ -1,0 +1,4 @@
+[submodule "third_party/simdog_go2"]
+        path = third_party/simdog_go2
+        url = /home/hao/simdog
+        ignore = dirty

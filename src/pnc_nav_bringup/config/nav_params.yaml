@@ -1,0 +1,55 @@
+# Navigation parameters for PNC Nav2
+nav_server:
+  ros__parameters:
+    # --- 基本参数 ---
+    control_frequency: 20.0          # 控制循环频率 (Hz)
+    global_frame: "map"
+    robot_frame: "base_link"
+
+    # --- 目标容差 ---
+    goal_tolerance_dist: 0.15        # 到达目标的距离容差 (m)
+    goal_tolerance_angle: 0.1        # 到达目标的角度容差 (rad)
+    max_planning_retries: 3
+
+    # --- 插件选择 ---
+    global_planner_plugin: "pnc_nav_planners::AStar2D"
+    path_tracker_plugin: "pnc_nav_planners::PurePursuit3D"
+
+    # --- Phase 1: 简单 2D costmap ---
+    costmap:
+      frame_id: "map"
+      origin_x: -5.0
+      origin_y: -5.0
+      width: 10.0
+      height: 10.0
+      resolution: 0.1
+      robot_radius: 0.25
+      inflation_radius: 0.5
+      # 矩形障碍物: [min_x, min_y, max_x, max_y, ...]
+      obstacles: [
+        0.5, 1.95, 3.5, 2.05,
+        -1.05, -2.0, -0.95, 2.0,
+        1.25, -2.75, 2.75, -1.25,
+        -4.0, -3.05, -2.0, -2.95,
+        -3.05, 0.5, -2.95, 3.5
+      ]
+
+    # --- 全局规划器参数: 与插件实例名 global_planner 对齐 ---
+    global_planner:
+      resolution: 0.1              # 搜索分辨率 (m)
+      heuristic_weight: 1.2        # 启发式权重
+      max_iterations: 100000       # 最大迭代次数
+      allow_unknown: false         # 是否允许穿越未知区域
+      diagonal_movement: true      # 是否允许对角线移动
+      height_penalty: 2.0          # 高度变化惩罚系数
+      use_3d: false                # Phase 1 只跑 2D
+
+    # --- 路径跟踪器参数: 与插件实例名 path_tracker 对齐 ---
+    path_tracker:
+      lookahead_distance: 0.6      # 前视距离 (m)
+      min_lookahead: 0.3
+      max_lookahead: 1.5
+      lookahead_gain: 0.5          # 速度自适应前视增益
+      max_linear_vel: 0.5
+      max_angular_vel: 1.0
+      min_linear_vel: 0.05

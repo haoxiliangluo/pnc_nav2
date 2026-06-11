@@ -1,0 +1,17 @@
+# 3D导航目标
+geometry_msgs/PoseStamped goal
+string planner_id          # 可选：指定使用的规划器
+float64 max_planning_time  # 最大规划时间 (s)，0表示使用默认值
+---
+# Result
+bool success
+float64 total_time         # 总导航时间 (s)
+float64 distance_traveled  # 实际行驶距离 (m)
+string message
+---
+# Feedback
+geometry_msgs/PoseStamped current_pose
+float64 distance_remaining
+float64 eta_seconds        # 预计剩余时间
+uint16 number_of_recoveries
+string current_state       # "planning", "following", "recovering"

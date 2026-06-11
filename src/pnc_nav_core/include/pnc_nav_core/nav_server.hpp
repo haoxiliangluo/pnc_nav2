@@ -1,0 +1,113 @@
+// Copyright (c) 2024, PNC Nav2
+// Licensed under MIT License
+
+#ifndef PNC_NAV_CORE__NAV_SERVER_HPP_
+#define PNC_NAV_CORE__NAV_SERVER_HPP_
+
+#include <memory>
+#include <string>
+
+#include "rclcpp/rclcpp.hpp"
+#include "pluginlib/class_loader.hpp"
+#include "nav_msgs/msg/path.hpp"
+#include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/twist.hpp"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
+
+#include "pnc_nav_core/global_planner_base.hpp"
+#include "pnc_nav_core/path_tracker_base.hpp"
+#include "pnc_nav_core/costmap_interface.hpp"
+
+namespace pnc_nav_core
+{
+
+/**
+ * @enum NavState
+ * @brief 导航状态机
+ */
+enum class NavState
+{
+  IDLE,           // 空闲
+  PLANNING,       // 全局规划中
+  FOLLOWING,      // 路径跟踪中
+  RECOVERING,     // 恢复行为中
+  SUCCEEDED,      // 导航成功
+  FAILED          // 导航失败
+};
+
+/**
+ * @class NavServer
+ * @brief 导航服务器 — 协调全局规划、局部规划、路径跟踪
+ *
+ * 核心职责：
+ * 1. 管理导航状态机
+ * 2. 通过 pluginlib 加载/切换规划器插件
+ * 3. 协调规划-控制循环
+ * 4. Phase 1 通过 goal_pose topic 接收目标点
+ */
+class NavServer : public rclcpp::Node
+{
+public:
+  explicit NavServer(const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
+  ~NavServer() override;
+
+  /// 初始化（加载插件、订阅话题）
+  void initialize();
+
+  /// 获取当前导航状态
+  NavState getState() const { return state_; }
+
+private:
+  // --- 状态机 ---
+  NavState state_{NavState::IDLE};
+  void transitionTo(NavState new_state);// 状态转换，负责日志记录和状态更新
+
+  // --- 插件管理：Phase 1 只保留全局规划 + 路径跟踪闭环 ---
+  pluginlib::ClassLoader<GlobalPlannerBase> global_planner_loader_;
+  pluginlib::ClassLoader<PathTrackerBase> path_tracker_loader_;
+
+  GlobalPlannerBase::SharedPtr global_planner_;
+  PathTrackerBase::SharedPtr path_tracker_;
+
+  void loadPlugins();
+  bool switchGlobalPlanner(const std::string & plugin_name);
+  bool switchPathTracker(const std::string & plugin_name);
+
+  // --- TF ---
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;// TF缓存
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;// TF监听器
+  bool getCurrentPose(geometry_msgs::msg::PoseStamped & pose);// 获取机器人当前位姿
+
+  // --- 代价地图 ---
+  CostmapInterface::SharedPtr costmap_;
+
+  // --- 控制循环 ---
+  rclcpp::TimerBase::SharedPtr control_timer_;
+  void controlLoop();
+
+  // --- 发布者 ---
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_plan_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
+
+  // --- 订阅者 ---
+  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
+  void goalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+
+  // --- 当前状态 ---
+  geometry_msgs::msg::PoseStamped current_goal_;
+  nav_msgs::msg::Path current_global_path_;
+  geometry_msgs::msg::Twist current_velocity_;
+
+  // --- 参数 ---
+  double control_frequency_{20.0};// 控制循环频率 (Hz)
+  double goal_tolerance_dist_{0.15};// 到达目标的距离容差 (m)
+  double goal_tolerance_angle_{0.1};// 到达目标的角度容差 (rad)
+  int max_planning_retries_{3};// 最大规划重试次数
+  std::string global_frame_{"map"};
+  std::string robot_frame_{"base_link"};
+};
+
+}  // namespace pnc_nav_core
+
+#endif  // PNC_NAV_CORE__NAV_SERVER_HPP_
