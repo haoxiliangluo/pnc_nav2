@@ -10,6 +10,12 @@
   </class>
 </library>
 
+<library path="pure_pursuit_2d_tracker">
+  <class type="pnc_nav_planners::PurePursuit2D" base_class_type="pnc_nav_core::PathTrackerBase">
+    <description>Pure Pursuit 2D path tracker</description>
+  </class>
+</library>
+
 <library path="pure_pursuit_3d_tracker">
   <class type="pnc_nav_planners::PurePursuit3D" base_class_type="pnc_nav_core::PathTrackerBase">
     <description>Pure Pursuit 3D path tracker</description>

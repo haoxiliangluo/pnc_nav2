@@ -54,6 +54,16 @@ ament_target_dependencies(astar_2d_planner ${dependencies})
 # Path Trackers
 # ============================================================
 
+# Pure Pursuit 2D
+add_library(pure_pursuit_2d_tracker SHARED
+  src/path_trackers/pure_pursuit_2d/pure_pursuit_2d.cpp
+)
+target_include_directories(pure_pursuit_2d_tracker PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(pure_pursuit_2d_tracker ${dependencies})
+
 # Pure Pursuit 3D
 add_library(pure_pursuit_3d_tracker SHARED
   src/path_trackers/pure_pursuit_3d/pure_pursuit_3d.cpp
@@ -75,6 +85,7 @@ install(DIRECTORY include/
 install(TARGETS
   astar_3d_planner
   astar_2d_planner
+  pure_pursuit_2d_tracker
   pure_pursuit_3d_tracker
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
@@ -89,6 +100,7 @@ ament_export_include_directories(include)
 ament_export_libraries(
   astar_3d_planner
   astar_2d_planner
+  pure_pursuit_2d_tracker
   pure_pursuit_3d_tracker
 )
 ament_export_targets(export_${PROJECT_NAME})
