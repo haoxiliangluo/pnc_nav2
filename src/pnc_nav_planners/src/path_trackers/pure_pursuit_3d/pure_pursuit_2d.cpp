@@ -19,7 +19,7 @@ namespace pnc_nav_planners
         name_ = name;
 
         node_->declare_parameter(name_ + ".lookahead_distance", 0.6);
-        node_->declare_parameter(name_ + ".min_lookahead", 0.6);
+        node_->declare_parameter(name_ + ".min_lookahead", 0.3);
         node_->declare_parameter(name_ + ".max_lookahead", 1.5);
         node_->declare_parameter(name_ + ".lookahead_gain", 0.5);
         node_->declare_parameter(name_ + ".max_linear_vel", 0.5);
@@ -67,9 +67,12 @@ namespace pnc_nav_planners
     const geometry_msgs::msg::PoseStamped & current_pose,
     double dist_tolerance)
     {
+      if(path_.poses.empty())return true;
+
         double dx = path_.poses.back().pose.position.x - current_pose.pose.position.x;
         double dy = path_.poses.back().pose.position.y - current_pose.pose.position.y;
         double dist_to_goal = std::hypot(dx, dy);
+        
        return current_waypoint_idx_ >= path_.poses.size() ||
              dist_to_goal <= dist_tolerance;
     }
@@ -112,8 +115,22 @@ namespace pnc_nav_planners
         geometry_msgs::msg::TwistStamped cmd;
         cmd.header.stamp = node_->now();
         cmd.header.frame_id = current_pose.header.frame_id;
-        cmd.twist.linear.x = std::clamp(current_vel.linear.x, min_linear_vel_, max_linear_vel_);
+        double  target_speed = max_linear_vel_ / (1.0 + std::abs(curvature) * 2.0); // 根据曲率调整速度
+        double dist_to_goal = std::hypot(path_.poses.back().pose.position.x - current_pose.pose.position.x,
+                                     path_.poses.back().pose.position.y - current_pose.pose.position.y);
+        if(dist_to_goal < lookahead_distance_)
+        {
+            target_speed = std::max(min_linear_vel_, target_speed * (dist_to_goal / lookahead_distance_)); // 接近目标时减速
+        }
+        cmd.twist.linear.x = std::clamp(target_speed, min_linear_vel_, max_linear_vel_);
         cmd.twist.angular.z = std::clamp(curvature * cmd.twist.linear.x, -max_angular_vel_, max_angular_vel_);
+        if(node_->get_parameter("debug").as_bool())
+        {
+            RCLCPP_INFO(node_->get_logger(), "Current Waypoint Index: %zu, Lookahead Point: (%.2f, %.2f), Curvature: %.4f, Cross Track Error: %.4f, Heading Error: %.4f",
+                        current_waypoint_idx_, lookahead_point.pose.position.x, lookahead_point.pose.position.y,
+                        curvature, cross_track_error_, heading_error_);
+            RCLCPP_INFO(node_->get_logger(), "Target Speed: %.2f, Angular Velocity: %.2f", cmd.twist.linear.x, cmd.twist.angular.z);
+        }
         return cmd;
 
 
@@ -132,12 +149,16 @@ namespace pnc_nav_planners
         }
         double path_yaw = std::atan2(dy, dx);
         double robot_yaw = tf2::getYaw(current_pose.pose.orientation);
-        double delta = path_yaw - robot_yaw;
-        while (delta > M_PI) delta -= 2.0 * M_PI;
-        while (delta < -M_PI) delta += 2.0 * M_PI;
-        heading_error_ = delta;
-        cross_track_error_ = std::sin(heading_error_) * lookahead_dist;
-        return 2.0 * cross_track_error_ / (lookahead_dist * lookahead_dist);
+        // double delta = path_yaw - robot_yaw;
+        // while (delta > M_PI) delta -= 2.0 * M_PI;
+        // while (delta < -M_PI) delta += 2.0 * M_PI;
+        //double delta = atan2(dy, dx) - tf2::getYaw(current_pose.pose.orientation);
+        double delta = std::atan2(std::sin(path_yaw - robot_yaw), std::cos(path_yaw - robot_yaw));
+        heading_error_ = delta;// 航向误差
+        cross_track_error_ = std::sin(heading_error_) * lookahead_dist;// 横向误差 = 路径与机器人连线的距离 * sin(路径与机器人航向的夹角)
+        // return 2.0 * cross_track_error_ / (lookahead_dist * lookahead_dist);
+        return std::clamp(2.0 * std::sin(heading_error_) / lookahead_dist, -5.0, 5.0); // 曲率 = 2 * 横向误差 / 前视距离^2
     }
 
 }
+PLUGINLIB_EXPORT_CLASS(pnc_nav_planners::PurePursuit2D, pnc_nav_core::PathTrackerBase)
