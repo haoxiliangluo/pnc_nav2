@@ -87,6 +87,7 @@ namespace pnc_nav_planners
         return false;
     }
     global_path_ = path;
+    current_goal_ = path.poses.back();
     return true;
   }
 
@@ -206,7 +207,17 @@ namespace pnc_nav_planners
   // 代价函数
   double DWA2D::pathDistanceCost(const Trajectory & traj) const
   {
+    auto psoes = traj.poses.back();
+    double min_cost = std::numeric_limits<double>::max();
 
+    for(auto &  tpose:traj.poses)
+    {
+      double dx = psoes.pose.position.x - tpose.pose.position.x;
+      double dy = psoes.pose.position.y - tpose.pose.position.y;
+      double cost = std::hypot(dx,dy);
+      min_cost = std::min(min_cost,cost);
+    }
+    return min_cost;
   }
   double DWA2D::goalDistanceCost(const Trajectory & traj) const
   {
@@ -215,19 +226,67 @@ namespace pnc_nav_planners
     double dy = traj.poses.back().pose.position.y - current_goal_.pose.position.y;
     double distans = std::hypot(dx,dy);
     return distans;
-
-    
   }
   double DWA2D::obstacleCost(const Trajectory & traj) const
-  {
+  { double max_cost = 0.0;
+    if(!costmap_)return 0.0;
+    for(auto & obs :traj.poses)
+    {
+      if(costmap_->isOccupied(obs.pose.position.x,obs.pose.position.y,0.0))
+      {
+        return std::numeric_limits<double>::max();
+      }
 
+      double cost = costmap_->getCost(obs.pose.position.x,obs.pose.position.y,0.0);
+      max_cost = std::max(max_cost,cost);
+    }
+    return max_cost;
   }
   // 计算速度命令
   geometry_msgs::msg::TwistStamped DWA2D::computeVelocityCommand(
     const geometry_msgs::msg::PoseStamped & current_pose,
     const geometry_msgs::msg::Twist & current_vel) 
     {
+      geometry_msgs::msg::TwistStamped best_cmd;
+      best_cmd.header = current_pose.header;
+      double best_cost = std::numeric_limits<double>::max();
         //先计算动态窗口然后前向仿真生成轨迹,对轨迹进行评价函数打分,选择分数最高的一个,最后发布出去
+        double min_vx,max_vx,min_vy,max_vy,min_vtheta, max_vtheta;
+        computeDynamicWindow(current_vel, min_vx,max_vx,min_vy,max_vy,min_vtheta, max_vtheta);
+  //         // 采样参数
+  // double sim_time_{1.0};// 前向仿真时间长度 (s)
+  // int vx_samples_{20};// 前向仿真时间内的速度采样数量
+  // int vy_samples_{10};// 侧向速度采样数量
+  // int vtheta_samples_{20};// 角速度采样数量
+  // double dt_{0.1};// 前向仿真时间步长
+  double dvx = (max_vx - min_vx) / (vx_samples_ - 1);
+  double dvy = (max_vy - min_vy) / (vy_samples_ - 1);
+  double dvtheta = (max_vtheta - min_vtheta) / (vtheta_samples_ - 1);
+  for(int i=0; i < vx_samples_ ; i++)
+  {
+    double vx = min_vx + dvx * i;
+    for(int j =0; j< vy_samples_ ;j++)
+    {
+      double vy = min_vy + dvy * j;
+      for(int k=0;k<vtheta_samples_ ;k++)
+      {
+        double vtheta = min_vtheta + dvtheta * k;
+        auto traj = simulateTrajectory(current_pose,vx,vy,vtheta);
+        double total_cost = computeCost(traj);
+        if(total_cost < best_cost)
+        {
+          best_cost = total_cost;
+          best_cmd.twist.linear.x = vx;
+          best_cmd.twist.linear.y = vy;
+          best_cmd.twist.angular.z = vtheta;
+          best_trajectory_ = traj;
+        }
+      }
+    }
+  }
+
+
+  return best_cmd;
     }
 }
 
