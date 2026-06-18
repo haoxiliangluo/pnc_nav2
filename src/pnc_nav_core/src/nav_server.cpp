@@ -61,6 +61,9 @@ void NavServer::initialize()
   goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
     "goal_pose", 10,
     std::bind(&NavServer::goalCallback, this, std::placeholders::_1));
+  odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
+    "odom", 20,
+    std::bind(&NavServer::odomCallback, this, std::placeholders::_1));
 
   // 加载插件
   loadPlugins();
@@ -72,6 +75,11 @@ void NavServer::initialize()
     std::bind(&NavServer::controlLoop, this));
 
   RCLCPP_INFO(get_logger(), "NavServer initialized, control freq: %.1f Hz", control_frequency_);
+}
+
+void NavServer::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg)
+{
+  current_velocity_ = msg->twist.twist;
 }
 
 void NavServer::loadPlugins()
@@ -254,7 +262,6 @@ void NavServer::controlLoop()
         RCLCPP_INFO(get_logger(), "Goal reached!");
       } else {
         cmd_vel_pub_->publish(cmd.twist);
-        current_velocity_ = cmd.twist;
       }
       break;
     }

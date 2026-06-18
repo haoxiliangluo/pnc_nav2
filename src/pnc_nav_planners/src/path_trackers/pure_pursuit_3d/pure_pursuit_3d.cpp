@@ -133,6 +133,7 @@ geometry_msgs::msg::TwistStamped PurePursuit3D::computeVelocityCommand(
   const geometry_msgs::msg::PoseStamped & current_pose,
   const geometry_msgs::msg::Twist & current_vel)
 {
+
   geometry_msgs::msg::TwistStamped cmd;
   cmd.header = current_pose.header;
 
