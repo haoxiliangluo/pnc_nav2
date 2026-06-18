@@ -51,6 +51,20 @@ target_include_directories(astar_2d_planner PUBLIC
 ament_target_dependencies(astar_2d_planner ${dependencies})
 
 # ============================================================
+# Local Planners
+# ============================================================
+
+# DWA 2D
+add_library(dwa_2d_planner SHARED
+  src/local_planners/dwa_3d/dwa_2d.cpp
+)
+target_include_directories(dwa_2d_planner PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(dwa_2d_planner ${dependencies})
+
+# ============================================================
 # Path Trackers
 # ============================================================
 
@@ -85,6 +99,7 @@ install(DIRECTORY include/
 install(TARGETS
   astar_3d_planner
   astar_2d_planner
+  dwa_2d_planner
   pure_pursuit_2d_tracker
   pure_pursuit_3d_tracker
   EXPORT export_${PROJECT_NAME}
@@ -100,6 +115,7 @@ ament_export_include_directories(include)
 ament_export_libraries(
   astar_3d_planner
   astar_2d_planner
+  dwa_2d_planner
   pure_pursuit_2d_tracker
   pure_pursuit_3d_tracker
 )
