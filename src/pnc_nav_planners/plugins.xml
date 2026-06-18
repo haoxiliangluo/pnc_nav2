@@ -10,6 +10,12 @@
   </class>
 </library>
 
+<library path="dwa_2d_planner">
+  <class type="pnc_nav_planners::DWA2D" base_class_type="pnc_nav_core::LocalPlannerBase">
+    <description>Dynamic Window Approach 2D local planner</description>
+  </class>
+</library>
+
 <library path="pure_pursuit_2d_tracker">
   <class type="pnc_nav_planners::PurePursuit2D" base_class_type="pnc_nav_core::PathTrackerBase">
     <description>Pure Pursuit 2D path tracker</description>

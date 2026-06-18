@@ -17,6 +17,7 @@
 #include "tf2_ros/transform_listener.h"
 
 #include "pnc_nav_core/global_planner_base.hpp"
+#include "pnc_nav_core/local_planner_base.hpp"
 #include "pnc_nav_core/path_tracker_base.hpp"
 #include "pnc_nav_core/costmap_interface.hpp"
 
@@ -64,15 +65,18 @@ private:
   NavState state_{NavState::IDLE};
   void transitionTo(NavState new_state);// 状态转换，负责日志记录和状态更新
 
-  // --- 插件管理：Phase 1 只保留全局规划 + 路径跟踪闭环 ---
+  // --- 插件管理 ---
   pluginlib::ClassLoader<GlobalPlannerBase> global_planner_loader_;
+  pluginlib::ClassLoader<LocalPlannerBase> local_planner_loader_;
   pluginlib::ClassLoader<PathTrackerBase> path_tracker_loader_;
 
   GlobalPlannerBase::SharedPtr global_planner_;
+  LocalPlannerBase::SharedPtr local_planner_;
   PathTrackerBase::SharedPtr path_tracker_;
 
   void loadPlugins();
   bool switchGlobalPlanner(const std::string & plugin_name);
+  bool switchLocalPlanner(const std::string & plugin_name);
   bool switchPathTracker(const std::string & plugin_name);
 
   // --- TF ---
@@ -89,6 +93,7 @@ private:
 
   // --- 发布者 ---
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_plan_pub_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr local_plan_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
 
   // --- 订阅者 ---
