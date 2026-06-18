@@ -10,6 +10,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "tf2_ros/buffer.h"
@@ -93,6 +94,9 @@ private:
   // --- 订阅者 ---
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
   void goalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+  void odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg);
 
   // --- 当前状态 ---
   geometry_msgs::msg::PoseStamped current_goal_;

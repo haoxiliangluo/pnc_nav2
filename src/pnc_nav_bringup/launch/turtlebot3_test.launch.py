@@ -1,20 +1,17 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-import os
 
 
 def generate_launch_description():
     """TurtleBot3测试启动文件 - 验证AStar2D和PurePursuit3D"""
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-
-    # TurtleBot3模型选择
-    turtlebot3_model = os.environ.get('TURTLEBOT3_MODEL', 'burger')
+    turtlebot3_model = LaunchConfiguration('turtlebot3_model')
 
     # 参数文件
     nav_params_file = PathJoinSubstitution([
@@ -35,6 +32,13 @@ def generate_launch_description():
             default_value='true',
             description='Use simulation clock'
         ),
+        DeclareLaunchArgument(
+            'turtlebot3_model',
+            default_value='waffle',
+            description='TurtleBot3 model: burger, waffle, or waffle_pi'
+        ),
+
+        SetEnvironmentVariable('TURTLEBOT3_MODEL', turtlebot3_model),
 
         # 启动TurtleBot3 Gazebo仿真
         IncludeLaunchDescription(

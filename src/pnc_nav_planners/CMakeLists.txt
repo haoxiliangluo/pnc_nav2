@@ -56,7 +56,7 @@ ament_target_dependencies(astar_2d_planner ${dependencies})
 
 # Pure Pursuit 2D
 add_library(pure_pursuit_2d_tracker SHARED
-  src/path_trackers/pure_pursuit_2d/pure_pursuit_2d.cpp
+  src/path_trackers/pure_pursuit_3d/pure_pursuit_2d.cpp
 )
 target_include_directories(pure_pursuit_2d_tracker PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

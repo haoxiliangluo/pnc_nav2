@@ -46,10 +46,10 @@ nav_server:
 
     # --- 路径跟踪器参数: 与插件实例名 path_tracker 对齐 ---
     path_tracker:
-      lookahead_distance: 0.6      # 前视距离 (m)
-      min_lookahead: 0.3
-      max_lookahead: 1.5
+      lookahead_distance: 0.8      # 前视距离 (m)
+      min_lookahead: 0.4
+      max_lookahead: 1.8
       lookahead_gain: 0.5          # 速度自适应前视增益
-      max_linear_vel: 0.5
-      max_angular_vel: 1.0
-      min_linear_vel: 0.05
+      max_linear_vel: 0.25
+      max_angular_vel: 0.6
+      min_linear_vel: 0.03

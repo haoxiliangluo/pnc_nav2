@@ -25,6 +25,9 @@ namespace pnc_nav_planners
         node_->declare_parameter(name_ + ".max_linear_vel", 0.5);
         node_->declare_parameter(name_ + ".max_angular_vel", 1.0);
         node_->declare_parameter(name_ + ".min_linear_vel", 0.05);
+        if (!node_->has_parameter("debug")) {
+            node_->declare_parameter("debug", false);
+        }
 
         lookahead_distance_ = node_->get_parameter(name_ + ".lookahead_distance").as_double();
         min_lookahead_ = node_->get_parameter(name_ + ".min_lookahead").as_double();

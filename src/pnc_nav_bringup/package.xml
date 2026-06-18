@@ -11,7 +11,6 @@
 
   <exec_depend>pnc_nav_core</exec_depend>
   <exec_depend>pnc_nav_planners</exec_depend>
-  <exec_depend>pnc_nav_sim</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>ros2launch</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
