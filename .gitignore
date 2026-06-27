@@ -34,3 +34,5 @@ Thumbs.db
 *.bag
 *.db3
 *.tmp
+nav_quality_latest.json
+nav_quality_results.csv

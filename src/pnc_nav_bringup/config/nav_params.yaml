@@ -9,12 +9,12 @@ nav_server:
     # --- 目标容差 ---
     goal_tolerance_dist: 0.15        # 到达目标的距离容差 (m)
     goal_tolerance_angle: 0.1        # 到达目标的角度容差 (rad)
-    max_planning_retries: 3
+    max_planning_retries: 3          # 
 
     # --- 插件选择 ---
     global_planner_plugin: "pnc_nav_planners::AStar2D"
-    local_planner_plugin: "pnc_nav_planners::DWA2D"
-    path_tracker_plugin: "pnc_nav_planners::PurePursuit3D"
+    local_planner_plugin: ""         # baseline 默认走 path_tracker；测试 DWA 时改为 "pnc_nav_planners::DWA2D"
+    path_tracker_plugin: "pnc_nav_planners::PurePursuit2D"
 
     # --- Phase 1: 简单 2D costmap ---
     costmap:
@@ -57,18 +57,18 @@ nav_server:
 
     # --- 局部规划器参数: 与插件实例名 local_planner 对齐 ---
     local_planner:
-      max_vel_x: 0.35
+      max_vel_x: 0.25
       max_vel_y: 0.0
-      max_vel_theta: 0.9
+      max_vel_theta: 1.0
       min_vel_x: 0.0
       acc_lim_x: 0.8
       acc_lim_y: 0.0
-      acc_lim_theta: 1.5
-      sim_time: 1.2
+      acc_lim_theta: 2.0
+      sim_time: 1.5
       vx_samples: 8
       vy_samples: 1
-      vtheta_samples: 15
+      vtheta_samples: 21
       dt: 0.1
-      path_distance_bias: 32.0
-      goal_distance_bias: 24.0
+      path_distance_bias: 22.0
+      goal_distance_bias: 28.0
       obstacle_cost_bias: 0.02

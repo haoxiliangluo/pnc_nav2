@@ -57,8 +57,11 @@ source install/setup.bash
 ### 运行 2D 导航测试（阶段1已完成）
 
 ```bash
-# 一键启动（包含 Gazebo + TurtleBot3 + NavServer + RViz）
-./start_nav.sh
+# 推荐入口（包含 TurtleBot3 Gazebo + map_server + NavServer + RViz）
+ros2 launch pnc_nav_bringup turtlebot3_test.launch.py
+
+# 等价的 2D bringup 入口也复用同一套 TurtleBot3 Phase 1 链路
+ros2 launch pnc_nav_bringup sim_2d_bringup.launch.py
 ```
 
 启动后：
@@ -66,6 +69,10 @@ source install/setup.bash
 2. RViz 中会显示灰色静态地图和机器人
 3. 使用顶部工具栏的 **"2D Goal Pose"** 设置目标点
 4. 观察红色路径规划和机器人移动
+
+当前 Phase 1 主路径使用 `Nav2CostmapAdapter` 订阅 `map_server` 发布的 `/map`
+(`nav_msgs/msg/OccupancyGrid`)。`pnc_nav_sim` 暂未作为源码包纳入 `src/`，
+不要依赖旧 `install/` 空间中的残留安装结果。
 
 ### 运行 3D 导航（Go2 机器狗，未来）
 
@@ -79,7 +86,7 @@ ros2 launch pnc_nav_bringup sim_3d_bringup.launch.py
 |------|------|------|
 | `pnc_nav_core` | NavServer + 插件基类 + 地图适配器 | ✅ 已完成 |
 | `pnc_nav_planners` | 规划器插件（A*、RRT*、PP、Stanley、DWA） | ✅ 已实现 |
-| `pnc_nav_bringup` | 启动文件与参数配置 | ✅ 已完成 |
+| `pnc_nav_bringup` | 启动文件与参数配置（当前推荐 TurtleBot3 Phase 1 入口） | ✅ 已完成 |
 | `pnc_nav_utils` | 评估工具（性能测试、地图编辑器） | ✅ 已完成 |
 | `pnc_nav_interfaces` | 自定义消息定义 | ✅ 已完成 |
 

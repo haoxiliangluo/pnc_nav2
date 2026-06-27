@@ -19,6 +19,9 @@ python3 src/pnc_nav_utils/evaluation/planner_tester.py
 
 # 4. 评估导航性能（可选）
 python3 src/pnc_nav_utils/evaluation/nav_evaluator.py
+
+# 5. 监测单次导航质量（推荐）
+python3 src/pnc_nav_utils/evaluation/nav_quality_monitor.py
 ```
 
 ---
@@ -175,6 +178,73 @@ trial,path_length,actual_distance,total_time_s,smoothness,height_change
 
 ---
 
+### 4. nav_quality_monitor.py
+
+**功能**：导航效果验收脚本。它会在线监听目标点、全局路径、可选局部路径、里程计和速度指令，自动判断一次导航是否成功，并给出路径跟踪误差、控制平滑性和总评分。
+
+**监听话题**：
+
+| 话题 | 默认值 | 说明 |
+|------|--------|------|
+| goal | `/goal_pose` | RViz 或任务层发布的目标点 |
+| global plan | `/global_plan` | 全局规划路径 |
+| local plan | `/local_plan` | 局部规划路径，可选；没有也能运行 |
+| odom | `/odom` | 实际轨迹来源 |
+| cmd_vel | `/cmd_vel` | 控制输出平滑性评估来源 |
+
+**核心指标**：
+
+- 是否到达目标、总耗时、最终目标误差
+- 全局路径长度、实际行驶距离、路径效率
+- 实际轨迹相对全局路径的平均误差、RMSE、P95、最大误差
+- 如果存在 `/local_plan`，额外统计局部路径相对全局路径、实际轨迹相对局部路径的偏差
+- 平均/最大线速度、平均/最大角速度、控制抖动分数、停顿次数
+- `navigation_score`：0-100 的综合评分
+
+**用法**：
+
+```bash
+cd /home/hao/pnc_nav2
+source install/setup.bash
+
+python3 src/pnc_nav_utils/evaluation/nav_quality_monitor.py
+```
+
+常用参数：
+
+```bash
+python3 src/pnc_nav_utils/evaluation/nav_quality_monitor.py \
+  --goal-tolerance 0.2 \
+  --timeout 60 \
+  --print-period 1.0 \
+  --plot \
+  --csv-output nav_quality_results.csv \
+  --json-output nav_quality_latest.json
+```
+
+不加 `--plot` 时，脚本仍会按 `--print-period` 周期输出运行状态，例如目标误差、实际行驶距离、最近跟踪 RMSE 和当前速度指令。
+加 `--plot` 后，脚本启动时会先打开一个空的 Matplotlib 窗口等待 `/goal_pose`，收到目标点和路径/里程计后实时绘制：
+
+- 蓝线：`/global_plan`
+- 橙线：`/local_plan`，如果存在
+- 绿线：`/odom` 实际轨迹
+- 红星：目标点
+
+如果当前 Matplotlib 默认使用 `agg` 这类非 GUI backend，脚本会自动尝试切换到 `TkAgg` 或 Qt backend。仍无法打开窗口时，评价统计会继续运行，但 live plot 会被禁用；可尝试：
+
+```bash
+MPLBACKEND=TkAgg python3 src/pnc_nav_utils/evaluation/nav_quality_monitor.py --plot
+```
+
+输出文件：
+
+```text
+nav_quality_results.csv   # 多次 trial 汇总
+nav_quality_latest.json   # 最近一次 trial 详情
+```
+
+---
+
 ## 典型工作流
 
 ```
@@ -182,7 +252,7 @@ trial,path_length,actual_distance,total_time_s,smoothness,height_change
 2. 将导出内容粘贴到 nav_params.yaml 的 costmap.obstacles 字段
 3. 启动 NavServer（读取 nav_params.yaml 中的 obstacles）
 4. planner_tester 测试 C++ 规划器
-5. nav_evaluator 评估导航性能（可选）
+5. nav_quality_monitor 验收导航效果并记录评分
 ```
 
 ---
