@@ -16,25 +16,30 @@ nav_server:
     local_planner_plugin: ""         # baseline 默认走 path_tracker；测试 DWA 时改为 "pnc_nav_planners::DWA2D"
     path_tracker_plugin: "pnc_nav_planners::PurePursuit2D"
 
-    # --- Phase 1: 简单 2D costmap ---
-    costmap:
-      frame_id: "map"
-      origin_x: -5.0
-      origin_y: -5.0
-      width: 10.0
-      height: 10.0
-      resolution: 0.1
-      robot_radius: 0.25
-      inflation_radius: 0.5
-      # 矩形障碍物: [min_x, min_y, max_x, max_y, ...]
-      obstacles: [
-        0.5, 1.95, 3.5, 2.05,
-        -1.05, -2.0, -0.95, 2.0,
-        1.25, -2.75, 2.75, -1.25,
-        -4.0, -3.05, -2.0, -2.95,
-        -3.05, 0.5, -2.95, 3.5
-      ]
-
+    # # --- Phase 1: 简单 2D costmap ---
+    # costmap:
+    #   frame_id: "map"
+    #   origin_x: -5.0
+    #   origin_y: -5.0
+    #   width: 10.0
+    #   height: 10.0
+    #   resolution: 0.1
+    #   robot_radius: 0.25
+    #   inflation_radius: 0.5
+    #   # 矩形障碍物: [min_x, min_y, max_x, max_y, ...]
+    #   obstacles: [
+    #     0.5, 1.95, 3.5, 2.05,
+    #     -1.05, -2.0, -0.95, 2.0,
+    #     1.25, -2.75, 2.75, -1.25,
+    #     -4.0, -3.05, -2.0, -2.95,
+    #     -3.05, 0.5, -2.95, 3.5
+    #   ]
+    map_adapter:
+      occupied_threshold: 65        # 占用阈值：/map 中栅格值大于这个值，就认为是障碍物
+      robot_radius: 0.25            # 机器人半径：机器人本体占用的安全半径，单位 m
+      inflation_radius: 0.35         # 膨胀半径：障碍物向外扩展的安全距离，单位 m
+      cost_scaling_factor: 3.0      # 代价衰减系数：数值越大，障碍物附近代价下降越快
+      unknown_as_occupied: true     # 是否把未知区域当作障碍物：true 表示 unknown 不可通行
     # --- 全局规划器参数: 与插件实例名 global_planner 对齐 ---
     global_planner:
       resolution: 0.1              # 搜索分辨率 (m)

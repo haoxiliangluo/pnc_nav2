@@ -22,10 +22,20 @@ public:
 
 private:
   void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
+  bool worldToMap(double wx, double wy, int & mx, int & my) const;
+  bool isCellInBounds(int mx, int my) const;
+  bool isObstacleCell(int mx, int my) const;
+  uint8_t rawCostAtCell(int mx, int my) const;
 
   rclcpp::Node::SharedPtr node_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
   nav_msgs::msg::OccupancyGrid::SharedPtr current_map_;
+
+  int occupied_threshold_ = 65;
+  double robot_radius_ = 0.25;
+  double inflation_radius_ = 0.35;
+  double cost_scaling_factor_ = 3.0;
+  bool unknown_as_occupied_ = true;
 };
 
 }
