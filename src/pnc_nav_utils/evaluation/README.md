@@ -22,6 +22,9 @@ python3 src/pnc_nav_utils/evaluation/nav_evaluator.py
 
 # 5. 监测单次导航质量（推荐）
 python3 src/pnc_nav_utils/evaluation/nav_quality_monitor.py
+
+# 6. 记录 RViz 2D Nav Goal 点（用于固定点复测）
+python3 src/pnc_nav_utils/evaluation/goal_recorder.py
 ```
 
 ---
@@ -242,6 +245,34 @@ MPLBACKEND=TkAgg python3 src/pnc_nav_utils/evaluation/nav_quality_monitor.py --p
 nav_quality_results.csv   # 多次 trial 汇总
 nav_quality_latest.json   # 最近一次 trial 详情
 ```
+
+---
+
+### 5. goal_recorder.py
+
+**功能**：监听 RViz `2D Nav Goal` 发布的 `/goal_pose`，把每次点击的目标点追加写入 CSV 和 JSONL。若 `/odom` 可用，会同时记录收到 goal 时最近一次里程计位置，作为该次测试的 start 参考。
+
+**用法**：
+
+```bash
+cd /home/hao/pnc_nav2
+source install/setup.bash
+
+python3 src/pnc_nav_utils/evaluation/goal_recorder.py \
+  --csv-output test/recorded_goals.csv \
+  --jsonl-output test/recorded_goals.jsonl
+```
+
+**输出字段**：
+
+| 字段 | 说明 |
+|------|------|
+| `goal_id` | 本次记录编号 |
+| `goal_x`, `goal_y`, `goal_z` | RViz 目标点位置 |
+| `goal_yaw_rad` | RViz 目标朝向 |
+| `goal_qx/qy/qz/qw` | 原始四元数 |
+| `start_available` | 是否记录到 odom 起点 |
+| `start_x`, `start_y`, `start_z`, `start_yaw_rad` | 收到 goal 时最近一次 odom 位姿 |
 
 ---
 

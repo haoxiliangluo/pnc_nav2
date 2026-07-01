@@ -13,8 +13,8 @@ nav_server:
 
     # --- 插件选择 ---
     global_planner_plugin: "pnc_nav_planners::AStar2D"
-    local_planner_plugin: ""         # baseline 默认走 path_tracker；测试 DWA 时改为 "pnc_nav_planners::DWA2D"
-    path_tracker_plugin: "pnc_nav_planners::PurePursuit2D"
+    local_planner_plugin: "pnc_nav_planners::DWA2D"         # baseline 默认走 path_tracker；测试 DWA 时改为 "pnc_nav_planners::DWA2D"
+    #path_tracker_plugin: "pnc_nav_planners::PurePursuit2D"
 
     # # --- Phase 1: 简单 2D costmap ---
     # costmap:
@@ -47,6 +47,7 @@ nav_server:
       max_iterations: 100000       # 最大迭代次数
       allow_unknown: false         # 是否允许穿越未知区域
       diagonal_movement: true      # 是否允许对角线移动
+      bspline_sample_count: 10     # 二次 B 样条每段采样点数
       height_penalty: 2.0          # 高度变化惩罚系数
       use_3d: false                # Phase 1 只跑 2D
 

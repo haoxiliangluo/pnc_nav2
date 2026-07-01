@@ -68,8 +68,10 @@ class AStar2D : public pnc_nav_core::GlobalPlannerBase
 
   // 路径平滑
   nav_msgs::msg::Path smoothPath(const nav_msgs::msg::Path & raw_path) const;
-
-
+  bool isSegmentFree(const geometry_msgs::msg::Point &from ,const geometry_msgs::msg::Point &end)const;
+  nav_msgs::msg::Path b2SmoothPath(const nav_msgs::msg::Path & current_path)const;
+  bool isPathFree(nav_msgs::msg::Path & path)const;
+  //bool isGridFree(const GridIndex &idx)const;判断对角是否可走,暂未实现
   // --- 成员变量 ---
   rclcpp::Node::SharedPtr node_;// ROS节点指针
   std::string name_; // 规划器实例名称
@@ -81,8 +83,9 @@ class AStar2D : public pnc_nav_core::GlobalPlannerBase
   double resolution_{0.05};// 栅格分辨率 (m)
   double heuristic_weight_{1.2};// 启发式权重
   int max_iterations_{100000};// 最大迭代次数
+  int bspline_sample_count_{10};// B样条每段采样点数
   bool allow_unknown_{false};// 是否允许未知区域
-  bool diagonal_movement_{true};// 是否允许对角移动
+  //bool diagonal_movement_{true};// 是否允许对角移动,四邻还没开发.
 
   // 地图边界（栅格坐标）
   int grid_min_x_{0}, grid_max_x_{0}; 

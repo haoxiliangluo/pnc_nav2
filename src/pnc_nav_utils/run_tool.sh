@@ -5,6 +5,7 @@
 #   ./run_tool.sh costmap_editor
 #   ./run_tool.sh planner_tester
 #   ./run_tool.sh nav_evaluator
+#   ./run_tool.sh goal_recorder
 
 set -e
 
@@ -22,8 +23,12 @@ fi
 cd "$PROJECT_ROOT"
 
 # 解析工具名称
-TOOL="$1"
-shift  # 移除第一个参数，剩余参数传递给 Python 脚本
+if [ $# -lt 1 ]; then
+    TOOL=""
+else
+    TOOL="$1"
+    shift  # 移除第一个参数，剩余参数传递给 Python 脚本
+fi
 
 case "$TOOL" in
     costmap_editor|editor)
@@ -38,6 +43,10 @@ case "$TOOL" in
         echo "启动 nav_evaluator..."
         python3 src/pnc_nav_utils/evaluation/nav_evaluator.py "$@"
         ;;
+    goal_recorder|goals|recorder)
+        echo "启动 goal_recorder..."
+        python3 src/pnc_nav_utils/evaluation/goal_recorder.py "$@"
+        ;;
     *)
         echo "用法: $0 <tool> [options]"
         echo ""
@@ -45,11 +54,13 @@ case "$TOOL" in
         echo "  costmap_editor  (或 editor)    - 代价地图编辑器"
         echo "  planner_tester  (或 tester)    - C++ 规划器测试工具"
         echo "  nav_evaluator   (或 evaluator) - 导航性能评估工具"
+        echo "  goal_recorder   (或 goals)     - 记录 RViz goal_pose 点"
         echo ""
         echo "示例:"
         echo "  $0 costmap_editor"
         echo "  $0 planner_tester --obstacles-yaml costmap_obstacles.yaml"
         echo "  $0 nav_evaluator"
+        echo "  $0 goal_recorder --csv-output test/goals.csv"
         exit 1
         ;;
 esac
