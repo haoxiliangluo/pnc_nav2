@@ -1,5 +1,9 @@
-![alt text](4741d4f3a6f50a59ad17b0e6bb8fa8bc.png)
-已经验证了整个pnc_nav_core的流程是通过的，验证流程如下：
+![Phase 1 nav_core 验证流程](../../docs/validation_images/phase1_nav_core_validation.png)
+已经验证了整个 pnc_nav_core 的 Phase 1 流程是通过的。
+
+注意：本文早期记录里提到的 `SimpleCostmap2D` 是最小流程验证用的旧路径。
+当前主实现已经切到 `Nav2CostmapAdapter`，通过订阅 `map_server` 发布的 `/map`
+(`nav_msgs/msg/OccupancyGrid`) 为 AStar2D 提供代价地图。
 
 ## pnc_nav_core 最小流程验证
 
@@ -7,12 +11,12 @@
 
 ```text
 NavServer 启动
-  -> 创建 SimpleCostmap2D
-  -> 加载 AStar3D 全局规划插件
+  -> 创建 Nav2CostmapAdapter 并订阅 /map
+  -> 加载 AStar2D 全局规划插件
   -> 加载 PurePursuit3D 路径跟踪插件
   -> 接收 /goal_pose
   -> 进入 PLANNING
-  -> AStar3D 输出 /global_plan
+  -> AStar2D 输出 /global_plan
   -> path_tracker 接收 path
   -> 进入 FOLLOWING
   -> PurePursuit3D 输出 /cmd_vel
@@ -26,7 +30,20 @@ colcon build --packages-select pnc_nav_interfaces pnc_nav_core pnc_nav_planners 
 source install/setup.bash
 ```
 
-### 2. 启动 NavServer
+### 2. 推荐启动 Phase 1 可复现入口
+
+```bash
+cd ~/pnc_nav2
+source install/setup.bash
+
+ros2 launch pnc_nav_bringup turtlebot3_test.launch.py
+```
+
+该入口会启动 TurtleBot3 Gazebo、`map_server`、`map -> odom` 静态 TF、
+`nav_server` 和 RViz。`sim_2d_bringup.launch.py` 当前也复用这条链路，
+不再依赖源码树里不存在的 `pnc_nav_sim`。
+
+### 3. 仅启动 NavServer 的最小调试方式
 
 ```bash
 cd ~/pnc_nav2
@@ -40,9 +57,9 @@ ros2 run pnc_nav_core nav_server_node --ros-args \
 
 ```text
 NavServer created
-SimpleCostmap2D: 10.0m x 10.0m, res=0.10, obstacles=5
-AStar3D configured: res=0.10, 3d=false
-Loaded global planner: pnc_nav_planners::AStar3D
+Nav2CostmapAdapter: subscribed to /map
+AStar2D activated
+Loaded global planner: pnc_nav_planners::AStar2D
 PurePursuit3D configured: Ld=0.60
 Loaded path tracker: pnc_nav_planners::PurePursuit3D
 NavServer initialized, control freq: 20.0 Hz
@@ -52,12 +69,12 @@ NavServer initialized, control freq: 20.0 Hz
 
 ```text
 NavServer 本体启动成功
-SimpleCostmap2D 创建成功
-AStar3D 插件加载成功
+Nav2CostmapAdapter 创建成功并订阅 /map
+AStar2D 插件加载成功
 PurePursuit3D 插件加载成功
 ```
 
-### 3. 发布静态 TF
+### 4. 发布静态 TF
 
 因为当前没有 Gazebo 和 odom，所以手动发布一个固定的 `map -> base_link`：
 
@@ -72,7 +89,7 @@ ros2 run tf2_ros static_transform_publisher 0 0 0 0 0 0 map base_link
 
 注意：这是静态 TF，机器人位置不会真的变化，所以这次只能验证 core 流程，不能验证真实闭环运动。
 
-### 4. 监听输出话题
+### 5. 监听输出话题
 
 监听全局路径：
 
@@ -92,7 +109,7 @@ source install/setup.bash
 ros2 topic echo /cmd_vel
 ```
 
-### 5. 发布目标点
+### 6. 发布目标点
 
 ```bash
 cd ~/pnc_nav2
@@ -109,7 +126,7 @@ NavServer 端观察到：
 ```text
 Received goal: (2.00, 0.00, 0.00)
 State transition: 0 -> 1
-AStar3D: path found in 21 iterations
+AStar2D: path found
 Path tracker set with new path
 State transition: 1 -> 2
 Global path found with 21 waypoints
@@ -129,7 +146,7 @@ linear.x: 0.253...
 angular.z: 0.123...
 ```
 
-### 6. 验证结论
+### 7. 验证结论
 
 这次验证说明：
 
@@ -142,8 +159,8 @@ goal_pose -> global planner -> global_plan -> path tracker -> cmd_vel
 
 ```text
 NavServer 参数加载
-SimpleCostmap2D 创建
-pluginlib 加载 AStar3D
+Nav2CostmapAdapter 订阅 /map
+pluginlib 加载 AStar2D
 pluginlib 加载 PurePursuit3D
 TF 查询当前位姿
 goalCallback 接收目标点
@@ -190,4 +207,4 @@ local_planner_base是局部规划器接口
 nav_server是调度服务接口
 nav2——costmap——adapter我还没看不知道干啥用的
 path_tracker_base是追踪的规划器接口
-simple_costmap_2d是人造的用于验证我一阶段的流程和算法是否实现。
+simple_costmap_2d 是早期人造验证路径；当前主路径已经使用 `Nav2CostmapAdapter` 对接 `/map`。

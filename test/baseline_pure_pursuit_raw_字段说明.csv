@@ -1,0 +1,29 @@
+字段名,中文含义,单位/取值,说明
+trial_id,测试编号,整数,每次发送目标点后生成一次 trial
+start_time_unix,开始时间,Unix 时间戳,trial 开始记录的系统时间
+end_time_unix,结束时间,Unix 时间戳,trial 结束记录的系统时间
+success,是否成功,True/False,是否在超时前到达目标容差范围
+result,测试结果,goal_reached/timeout/new_goal,goal_reached 表示到达目标；timeout 表示超时；new_goal 表示被新目标打断
+total_time_s,总耗时,秒,从收到目标到 trial 结束的时间
+final_goal_error_m,最终目标误差,米,结束时机器人当前位置到目标点的距离
+planned_path_length_m,全局规划路径长度,米,/global_plan 的路径总长度
+actual_distance_m,实际行驶距离,米,根据 /odom 轨迹累计得到的实际运动距离
+path_efficiency,路径效率,无量纲,planned_path_length_m / actual_distance_m；大于 1 通常表示实际轨迹比规划路径短，可能有切弯
+mean_tracking_error_m,平均跟踪误差,米,实际 odom 轨迹到全局路径的平均距离
+max_tracking_error_m,最大跟踪误差,米,实际 odom 轨迹到全局路径的最大距离
+rmse_tracking_error_m,跟踪误差 RMSE,米,实际轨迹相对全局路径的均方根误差
+tracking_error_p95_m,95 分位跟踪误差,米,95% 轨迹点的跟踪误差小于该值
+local_plan_available,是否有局部路径,True/False,当前 Pure Pursuit baseline 下通常为 False；启用 DWA 后应为 True
+local_path_length_m,局部路径长度,米,/local_plan 的路径长度；没有局部路径时为 0
+local_vs_global_mean_error_m,局部路径相对全局路径平均误差,米,/local_plan 到 /global_plan 的平均偏差；无局部路径时为 0
+local_vs_global_max_error_m,局部路径相对全局路径最大误差,米,/local_plan 到 /global_plan 的最大偏差；无局部路径时为 0
+actual_vs_local_mean_error_m,实际轨迹相对局部路径平均误差,米,/odom 到 /local_plan 的平均偏差；无局部路径时为 0
+actual_vs_local_max_error_m,实际轨迹相对局部路径最大误差,米,/odom 到 /local_plan 的最大偏差；无局部路径时为 0
+avg_speed_mps,平均线速度,米/秒,根据 /cmd_vel 统计的平均线速度
+max_speed_mps,最大线速度,米/秒,根据 /cmd_vel 统计的最大线速度
+avg_angular_speed_radps,平均角速度,弧度/秒,根据 /cmd_vel angular.z 统计的平均角速度绝对值
+max_angular_speed_radps,最大角速度,弧度/秒,根据 /cmd_vel angular.z 统计的最大角速度绝对值
+cmd_oscillation_score,控制抖动评分,无量纲,根据连续 cmd_vel 变化量估计；越小表示控制越平滑
+stop_count,停顿次数,整数,运行过程中速度接近 0 的停顿次数
+replan_count,重规划次数,整数,trial 期间收到 /global_plan 的次数
+navigation_score,导航评分,0-100,综合成功、误差、效率、平滑性等指标得到的评分

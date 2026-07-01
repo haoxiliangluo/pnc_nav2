@@ -32,12 +32,16 @@ void AStar2D::configure(
     node_->declare_parameter(name_ + ".max_iterations", 100000);
     node_->declare_parameter(name_ + ".allow_unknown", false);
     node_->declare_parameter(name_ + ".diagonal_movement", true);
+    node_->declare_parameter(name_ + ".bspline_sample_count", 10);
 
     resolution_ = node_->get_parameter(name_ + ".resolution").as_double();
     heuristic_weight_ = node_->get_parameter(name_ + ".heuristic_weight").as_double();
     max_iterations_ = node_->get_parameter(name_ + ".max_iterations").as_int();
     allow_unknown_ = node_->get_parameter(name_ + ".allow_unknown").as_bool();
-    diagonal_movement_ = node_->get_parameter(name_ + ".diagonal_movement").as_bool();
+    bspline_sample_count_ = std::max(
+      1,
+      static_cast<int>(node_->get_parameter(name_ + ".bspline_sample_count").as_int()));
+    //diagonal_movement_ = node_->get_parameter(name_ + ".diagonal_movement").as_bool();
 }
 
 void AStar2D::activate()
@@ -130,9 +134,134 @@ nav_msgs::msg::Path AStar2D::reconstructPath(
 
 nav_msgs::msg::Path AStar2D::smoothPath(const nav_msgs::msg::Path & raw_path) const
 {
-  return raw_path;
+  nav_msgs::msg::Path simplified;
+  simplified.header = raw_path.header;
+  if(raw_path.poses.size() < 3)
+    return raw_path;
+  simplified.poses.push_back(raw_path.poses.front());
+  const double angle_thre = std::sin(3*M_PI/180.0);
+  for(size_t i =1; i+1 <raw_path.poses.size();i++)
+  {
+    const auto & prev = simplified.poses.back().pose.position;
+    const auto & curr = raw_path.poses[i].pose.position;
+    const auto & next = raw_path.poses[i+1].pose.position;
+    double v1x = curr.x-prev.x;
+    double v1y = curr.y-prev.y;
+    double v2x = next.x-curr.x;
+    double v2y = next.y-curr.y;
+    double len1  = std::hypot(v1x,v1y);
+    double len2 = std::hypot(v2x,v2y);
+    if(len1 < 1e-5 ||len2 < 1e-5)
+    {
+      continue;
+    }
+    double cross = v1x*v2y -v2x*v1y;
+    double sin_angle = std::abs(cross) / (len1*len2);
+    if(sin_angle > angle_thre|| !isSegmentFree(prev,next))
+    {
+      simplified.poses.push_back(raw_path.poses[i]);
+    }
+  }
+  simplified.poses.push_back(raw_path.poses.back());
+
+  RCLCPP_INFO(
+  node_->get_logger(),
+  "AStar2D path simplified: raw=%zu, simplified=%zu",
+  raw_path.poses.size(),
+  simplified.poses.size());
+auto spline = b2SmoothPath(simplified);
+if(isPathFree(spline))
+{
+
+RCLCPP_INFO(
+  node_->get_logger(),
+  "AStar2D b-spline: sparse=%zu, spline=%zu, accepted=%s",
+  simplified.poses.size(),
+  spline.poses.size(),
+   "true" );
+  return spline;
+}
+RCLCPP_INFO(
+  node_->get_logger(),
+  "AStar2D b-spline: sparse=%zu, spline=%zu, accepted=%s",
+  simplified.poses.size(),
+  spline.poses.size(),
+   "false" );
+  return simplified;
+}
+nav_msgs::msg::Path AStar2D::b2SmoothPath(const nav_msgs::msg::Path & current_path)const{
+  if(current_path.poses.size()< 3){
+    return current_path;
+  }
+  std::vector<geometry_msgs::msg::Point> ctrl;
+  nav_msgs::msg::Path bs2Path;
+  int sample_count = bspline_sample_count_;
+  bs2Path.header = current_path.header;
+  ctrl.push_back(current_path.poses.front().pose.position);
+  for(const auto & pose :current_path.poses)
+  {
+    ctrl.push_back(pose.pose.position);
+  }
+  ctrl.push_back(current_path.poses.back().pose.position);
+  for(size_t i=0;i+2<ctrl.size();i++)
+  {
+    geometry_msgs::msg::Point p0 = ctrl[i];
+    geometry_msgs::msg::Point p1 = ctrl[i+1];
+    geometry_msgs::msg::Point p2 = ctrl[i+2];
+    for(int j=0;j<=sample_count;j++)
+    {
+      double t = static_cast<double>(j) / sample_count;
+      double b0 = 0.5 * (1-t)*(1-t);
+      double b1 = 0.5 * (-2 * t * t + 2 * t + 1);
+      double b2 = 0.5 *t * t;
+
+      geometry_msgs::msg::PoseStamped p;
+      p.header = current_path.header;
+      p.pose.position.x = b0*p0.x +b1*p1.x + b2*p2.x;
+      p.pose.position.y =  b0*p0.y +b1*p1.y + b2*p2.y;
+      p.pose.position.z = 0;
+      p.pose.orientation.w = 1.0;
+      bs2Path.poses.push_back(p);
+    }
+  }
+  return bs2Path;
+
+}
+bool AStar2D::isPathFree(nav_msgs::msg::Path & path)const
+{
+  if(path.poses.size() < 2){
+    return false;
+  }
+  for(size_t i =0;i+1<path.poses.size();i++)
+  {
+    const auto &from = path.poses[i].pose.position;
+    const auto &to = path.poses[i+1].pose.position;
+    if(!isSegmentFree(from,to)){
+      return false;
+    }
+  }
+  return true;
 }
 
+bool AStar2D::isSegmentFree(const geometry_msgs::msg::Point &from ,const geometry_msgs::msg::Point &end)const
+{
+  if(!costmap_)return false;
+  double dist = std::hypot((end.x - from.x),(end.y - from.y));
+  double step = resolution_ *0.5;
+  int samples  = std::max(1,static_cast<int>(std::ceil(dist/step)));
+  for(int i=0;i<=samples;i++)
+  {
+    double t = static_cast<double>(i)/samples;
+    double x = from.x + t*(end.x - from.x);
+    double y = from.y + t*(end.y - from.y);
+    if(!costmap_->isInBounds(x,y,0))return false;
+    if(costmap_->isOccupied(x,y,0))return false;
+    if(!allow_unknown_&&costmap_->getCost(x,y,0)>254)return false;
+
+
+  }return true;
+
+}
 nav_msgs::msg::Path AStar2D::createPlan(
   const geometry_msgs::msg::PoseStamped & start,
   const geometry_msgs::msg::PoseStamped & goal)

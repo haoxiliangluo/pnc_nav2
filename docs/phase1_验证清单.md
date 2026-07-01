@@ -77,3 +77,29 @@
 ---
 
 **下一阶段**：实现 DWA 局部规划器，增加实时避障能力。
+
+
+
+
+  double PurePursuit2D::computeCurvature(
+    const geometry_msgs::msg::PoseStamped & current_pose,
+    const geometry_msgs::msg::PoseStamped & lookahead_point)
+    {//有当前位子,前视点,前瞻距离,然后计算曲率
+        double dx = lookahead_point.pose.position.x - current_pose.pose.position.x;
+        double dy = lookahead_point.pose.position.y - current_pose.pose.position.y;
+        double lookahead_dist = std::hypot(dx, dy);
+        if(lookahead_dist < 1e-6)
+        {
+            return 0.0;
+        }
+        // double path_yaw = std::atan2(dy, dx);
+        // double robot_yaw = tf2::getYaw(current_pose.pose.orientation);
+        // double delta = path_yaw - robot_yaw;
+        // while (delta > M_PI) delta -= 2.0 * M_PI;
+        // while (delta < -M_PI) delta += 2.0 * M_PI;
+        double delta = atan2(dy, dx) - tf2::getYaw(current_pose.pose.orientation);
+        heading_error_ = delta;// 航向误差
+        // cross_track_error_ = std::sin(heading_error_) * lookahead_dist;// 横向误差 = 路径与机器人连线的距离 * sin(路径与机器人航向的夹角)
+        // return 2.0 * cross_track_error_ / (lookahead_dist * lookahead_dist);
+        return 2.0 * std::sin(heading_error_) / lookahead_dist; // 曲率 = 2 * 横向误差 / 前视距离^2
+    }

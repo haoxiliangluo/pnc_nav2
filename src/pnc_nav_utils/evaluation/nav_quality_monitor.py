@@ -207,7 +207,10 @@ class NavQualityMonitor(Node):
         self.current: Optional[TrialState] = None
         self.completed_trials: List[TrialMetrics] = []
         self.trial_counter = 0
-        self.plotter = LivePlotter() if args.plot else None
+        self.plotter = None
+        self.plot_enabled = args.plot
+        self.last_plot_time = 0.0
+        self.last_idle_status_time = 0.0
 
         self.create_subscription(PoseStamped, args.goal_topic, self.goal_callback, 10)
         self.create_subscription(Path, args.global_plan_topic, self.global_plan_callback, 10)
@@ -221,7 +224,9 @@ class NavQualityMonitor(Node):
             f"topics: goal={args.goal_topic}, global={args.global_plan_topic}, "
             f"local={args.local_plan_topic}, odom={args.odom_topic}, cmd={args.cmd_vel_topic}"
         )
-        if not args.plot:
+        if self.plot_enabled:
+            self.ensure_plotter()
+        else:
             self.get_logger().info("live plot disabled; pass --plot to show global/local/actual paths")
 
     def goal_callback(self, msg: PoseStamped) -> None:
@@ -235,9 +240,11 @@ class NavQualityMonitor(Node):
         self.get_logger().info(
             f"Trial {self.trial_counter} started: goal=({goal.x:.2f}, {goal.y:.2f}, {goal.z:.2f})"
         )
+        self.ensure_plotter()
         if self.plotter:
             self.plotter.reset()
-            self.plotter.update_goal(pose_to_point(msg))
+            self.last_plot_time = 0.0
+            self.refresh_plot(force=True)
 
     def global_plan_callback(self, msg: Path) -> None:
         if self.current is None:
@@ -247,7 +254,7 @@ class NavQualityMonitor(Node):
         points = path_to_points(msg)
         self.current.metrics.planned_path_length_m = path_length(points)
         if self.plotter:
-            self.plotter.update_global(points)
+            self.refresh_plot(force=True)
         self.get_logger().info(
             f"Trial {self.current.metrics.trial_id}: global plan received, "
             f"poses={len(points)}, length={self.current.metrics.planned_path_length_m:.2f}m"
@@ -259,7 +266,7 @@ class NavQualityMonitor(Node):
         self.current.latest_local_plan = msg
         self.current.metrics.local_plan_available = True
         if self.plotter:
-            self.plotter.update_local(path_to_points(msg))
+            self.refresh_plot(force=True)
 
     def odom_callback(self, msg: Odometry) -> None:
         if self.current is None:
@@ -267,8 +274,6 @@ class NavQualityMonitor(Node):
 
         point = odom_to_point(msg)
         self.current.odom_points.append(point)
-        if self.plotter:
-            self.plotter.update_actual(self.current.odom_points)
 
         if self.current.last_odom_point is not None:
             step = distance(self.current.last_odom_point, point)
@@ -296,17 +301,60 @@ class NavQualityMonitor(Node):
         self.current.stop_active = stopped
 
     def timer_callback(self) -> None:
-        if self.current is None:
-            return
         now = time.time()
+        if self.current is None:
+            if self.plotter:
+                self.plotter.spin_once()
+            if now - self.last_idle_status_time >= self.args.idle_print_period:
+                self.get_logger().info(
+                    f"Waiting for goal on {self.args.goal_topic}; no active trial yet"
+                )
+                self.last_idle_status_time = now
+            return
         elapsed = time.time() - self.current.metrics.start_time_unix
         if now - self.current.last_status_time >= self.args.print_period:
             self.print_running_status(elapsed)
             self.current.last_status_time = now
         if self.plotter:
-            self.plotter.spin_once()
+            self.refresh_plot()
         if elapsed > self.args.timeout:
             self.finish_current("timeout", success=False)
+
+    def ensure_plotter(self) -> None:
+        if self.plot_enabled and self.plotter is None:
+            try:
+                self.plotter = LivePlotter()
+            except Exception as exc:
+                self.plot_enabled = False
+                self.plotter = None
+                self.get_logger().error(
+                    "live plot disabled: failed to create a Matplotlib GUI window. "
+                    f"{exc}. Try running with MPLBACKEND=TkAgg or install a GUI backend."
+                )
+                return
+            self.get_logger().info(
+                f"live plot enabled; backend={self.plotter.backend}, "
+                f"refresh={self.args.plot_period:.2f}s, "
+                f"visible_odom_points={self.args.max_plot_points}"
+            )
+
+    def refresh_plot(self, force: bool = False) -> None:
+        if self.plotter is None or self.current is None:
+            return
+
+        now = time.time()
+        if not force and now - self.last_plot_time < self.args.plot_period:
+            return
+
+        goal = pose_to_point(self.current.goal)
+        global_points = path_to_points(self.current.global_plan) if self.current.global_plan else []
+        local_points = (
+            path_to_points(self.current.latest_local_plan) if self.current.latest_local_plan else []
+        )
+        visible_odom_points = max(1, self.args.max_plot_points)
+        actual_points = self.current.odom_points[-visible_odom_points:]
+        self.plotter.update_all(goal, global_points, local_points, actual_points)
+        self.last_plot_time = now
 
     def finish_current(self, result: str, success: bool) -> None:
         if self.current is None:
@@ -354,6 +402,7 @@ class NavQualityMonitor(Node):
         self.write_outputs()
         self.print_summary(metrics)
         if self.plotter:
+            self.refresh_plot(force=True)
             self.plotter.set_title(
                 f"Trial {metrics.trial_id}: {metrics.result}, score={metrics.navigation_score:.1f}"
             )
@@ -440,7 +489,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stop-angular-speed", type=float, default=0.02)
     parser.add_argument("--max-odom-step", type=float, default=1.0)
     parser.add_argument("--print-period", type=float, default=1.0)
+    parser.add_argument("--idle-print-period", type=float, default=5.0)
     parser.add_argument("--plot", action="store_true")
+    parser.add_argument("--plot-period", type=float, default=0.5)
+    parser.add_argument("--max-plot-points", type=int, default=2000)
     parser.add_argument("--csv-output", default="nav_quality_results.csv")
     parser.add_argument("--json-output", default="nav_quality_latest.json")
     return parser.parse_args()
@@ -448,9 +500,10 @@ def parse_args() -> argparse.Namespace:
 
 class LivePlotter:
     def __init__(self) -> None:
-        import matplotlib.pyplot as plt
+        plt = self._load_pyplot()
 
         self.plt = plt
+        self.backend = plt.get_backend()
         self.fig, self.ax = plt.subplots()
         self.global_line, = self.ax.plot([], [], "b-", label="global_plan")
         self.local_line, = self.ax.plot([], [], color="orange", label="local_plan")
@@ -465,6 +518,42 @@ class LivePlotter:
         self.ax.set_ylabel("y [m]")
         plt.ion()
         plt.show(block=False)
+        self.spin_once()
+
+    @staticmethod
+    def _load_pyplot():
+        import importlib
+        import sys
+
+        import matplotlib
+
+        backends = []
+        current_backend = matplotlib.get_backend()
+        if LivePlotter._is_interactive_backend(current_backend):
+            backends.append(current_backend)
+        backends.extend(["TkAgg", "Qt5Agg", "QtAgg"])
+
+        errors = []
+        for backend in dict.fromkeys(backends):
+            try:
+                matplotlib.use(backend, force=True)
+                sys.modules.pop("matplotlib.pyplot", None)
+                plt = importlib.import_module("matplotlib.pyplot")
+                selected_backend = plt.get_backend()
+                if LivePlotter._is_interactive_backend(selected_backend):
+                    return plt
+                errors.append(f"{backend}: selected non-interactive backend {selected_backend}")
+            except Exception as exc:
+                errors.append(f"{backend}: {exc}")
+
+        details = "; ".join(errors) if errors else f"current backend is {current_backend}"
+        raise RuntimeError(f"no interactive Matplotlib backend is available ({details})")
+
+    @staticmethod
+    def _is_interactive_backend(backend: object) -> bool:
+        name = str(backend).lower()
+        non_interactive = {"agg", "pdf", "ps", "svg", "cairo", "template"}
+        return name not in non_interactive and "inline" not in name
 
     def reset(self) -> None:
         for line in (self.global_line, self.local_line, self.actual_line, self.goal_line, self.start_line):
@@ -487,6 +576,23 @@ class LivePlotter:
         if points:
             self.start_line.set_data([points[0][0]], [points[0][1]])
 
+    def update_all(
+        self,
+        goal: Point,
+        global_points: Sequence[Point],
+        local_points: Sequence[Point],
+        actual_points: Sequence[Point],
+    ) -> None:
+        self.goal_line.set_data([goal[0]], [goal[1]])
+        self._set_line_data(self.global_line, global_points)
+        self._set_line_data(self.local_line, local_points)
+        self._set_line_data(self.actual_line, actual_points)
+        if actual_points:
+            self.start_line.set_data([actual_points[0][0]], [actual_points[0][1]])
+        else:
+            self.start_line.set_data([], [])
+        self._rescale()
+
     def set_title(self, title: str) -> None:
         self.ax.set_title(title)
         self.spin_once()
@@ -496,8 +602,11 @@ class LivePlotter:
         self.plt.pause(0.001)
 
     def _set_line(self, line, points: Sequence[Point]) -> None:
-        line.set_data([p[0] for p in points], [p[1] for p in points])
+        self._set_line_data(line, points)
         self._rescale()
+
+    def _set_line_data(self, line, points: Sequence[Point]) -> None:
+        line.set_data([p[0] for p in points], [p[1] for p in points])
 
     def _rescale(self) -> None:
         self.ax.relim()
@@ -507,16 +616,19 @@ class LivePlotter:
 
 def main() -> None:
     args = parse_args()
+    node = None
     rclpy.init()
-    node = NavQualityMonitor(args)
     try:
+        node = NavQualityMonitor(args)
         rclpy.spin(node)
     except KeyboardInterrupt:
-        if node.current is not None:
+        if node is not None and node.current is not None:
             node.finish_current("interrupted", success=False)
     finally:
-        node.destroy_node()
-        rclpy.shutdown()
+        if node is not None:
+            node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

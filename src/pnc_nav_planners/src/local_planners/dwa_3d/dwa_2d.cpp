@@ -203,15 +203,20 @@ void DWA2D::computeDynamicWindow(
     }
 double DWA2D::computeCost(const Trajectory & traj) const
 {
-  if (traj.poses.empty()) {
-    return std::numeric_limits<double>::max();
+  const double invalid_cost = std::numeric_limits<double>::max();
+  if (traj.poses.empty() || !costmap_) {
+    return invalid_cost;
   }
+
+  const double path_cost = pathDistanceCost(traj);
+  const double goal_cost = goalDistanceCost(traj);
   const double obstacle_cost = obstacleCost(traj);
-  if (!std::isfinite(obstacle_cost)) {
-    return obstacle_cost;
+  if (path_cost == invalid_cost || goal_cost == invalid_cost || obstacle_cost == invalid_cost) {
+    return invalid_cost;
   }
-    double total_cost = path_distance_bias_ * pathDistanceCost(traj) + goal_distance_bias_ *
-  goalDistanceCost(traj) + obstacle_cost_bias_ * obstacle_cost;
+
+  double total_cost = path_distance_bias_ * path_cost + goal_distance_bias_ *
+    goal_cost + obstacle_cost_bias_ * obstacle_cost;
   return total_cost;
 }
 
@@ -234,7 +239,7 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
 }
   double DWA2D::goalDistanceCost(const Trajectory & traj) const
   {
-    if(traj.poses.empty())return 0.0;
+    if(traj.poses.empty())return std::numeric_limits<double>::max();
     double dx = traj.poses.back().pose.position.x - current_goal_.pose.position.x;
     double dy = traj.poses.back().pose.position.y - current_goal_.pose.position.y;
     double distans = std::hypot(dx,dy);
@@ -242,7 +247,7 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
   }
   double DWA2D::obstacleCost(const Trajectory & traj) const
   { double max_cost = 0.0;
-    if(!costmap_)return 0.0;
+    if(!costmap_ || traj.poses.empty())return std::numeric_limits<double>::max();
     for(auto & obs :traj.poses)
     {
       if(costmap_->isOccupied(obs.pose.position.x,obs.pose.position.y,0.0))
@@ -259,38 +264,48 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
   geometry_msgs::msg::TwistStamped DWA2D::computeVelocityCommand(
     const geometry_msgs::msg::PoseStamped & current_pose,
     const geometry_msgs::msg::Twist & current_vel)
-    {
-      geometry_msgs::msg::TwistStamped best_cmd;
-      best_cmd.header = current_pose.header;
-  double best_cost = std::numeric_limits<double>::max();
-  double min_vx, max_vx, min_vy, max_vy, min_vtheta, max_vtheta;
-  computeDynamicWindow(current_vel, min_vx, max_vx, min_vy, max_vy, min_vtheta, max_vtheta);
-  for(int i=0; i < vx_samples_ ; i++)
   {
-    double vx = sampleValue(min_vx, max_vx, vx_samples_, i);
-    for(int j =0; j< vy_samples_ ;j++)
+    geometry_msgs::msg::TwistStamped best_cmd;
+    best_cmd.header = current_pose.header;
+
+    double best_cost = std::numeric_limits<double>::max();
+    bool found_valid_trajectory = false;
+    double min_vx, max_vx, min_vy, max_vy, min_vtheta, max_vtheta;
+    computeDynamicWindow(current_vel, min_vx, max_vx, min_vy, max_vy, min_vtheta, max_vtheta);
+
+    for(int i=0; i < vx_samples_ ; i++)
     {
-      double vy = sampleValue(min_vy, max_vy, vy_samples_, j);
-      for(int k=0;k<vtheta_samples_ ;k++)
+      double vx = sampleValue(min_vx, max_vx, vx_samples_, i);
+      for(int j =0; j< vy_samples_ ;j++)
       {
-        double vtheta = sampleValue(min_vtheta, max_vtheta, vtheta_samples_, k);
-        auto traj = simulateTrajectory(current_pose,vx,vy,vtheta);
-        double total_cost = computeCost(traj);
-        if(total_cost < best_cost)
+        double vy = sampleValue(min_vy, max_vy, vy_samples_, j);
+        for(int k=0;k<vtheta_samples_ ;k++)
         {
-          best_cost = total_cost;
-          best_cmd.twist.linear.x = vx;
-          best_cmd.twist.linear.y = vy;
-          best_cmd.twist.angular.z = vtheta;
-          best_trajectory_ = traj;
+          double vtheta = sampleValue(min_vtheta, max_vtheta, vtheta_samples_, k);
+          auto traj = simulateTrajectory(current_pose,vx,vy,vtheta);
+          double total_cost = computeCost(traj);
+          if(total_cost < best_cost)
+          {
+            found_valid_trajectory = true;
+            best_cost = total_cost;
+            best_cmd.twist.linear.x = vx;
+            best_cmd.twist.linear.y = vy;
+            best_cmd.twist.angular.z = vtheta;
+            best_trajectory_ = traj;
+          }
         }
       }
     }
-  }
 
-
-  return best_cmd;
+    if (!found_valid_trajectory) {
+      best_trajectory_.poses.clear();
+      RCLCPP_WARN_THROTTLE(
+        node_->get_logger(), *node_->get_clock(), 1000,
+        "DWA2D: no valid trajectory found, publishing zero velocity");
     }
+
+    return best_cmd;
+  }
 }
 
 
