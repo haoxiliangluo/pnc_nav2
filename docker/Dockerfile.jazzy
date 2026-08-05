@@ -1,0 +1,42 @@
+# Independent pnc_nav2 dev image: official ROS 2 Jazzy + Gazebo Harmonic (ros_gz).
+# No MX / MoveXBot packages.
+FROM osrf/ros:jazzy-desktop-noble
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV ROS_DISTRO=jazzy
+ENV GZ_VERSION=harmonic
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    python3-pip \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    ros-${ROS_DISTRO}-ros-gz \
+    ros-${ROS_DISTRO}-ros-gz-sim \
+    ros-${ROS_DISTRO}-ros-gz-bridge \
+    ros-${ROS_DISTRO}-robot-state-publisher \
+    ros-${ROS_DISTRO}-xacro \
+    ros-${ROS_DISTRO}-tf2-ros \
+    ros-${ROS_DISTRO}-tf2-geometry-msgs \
+    ros-${ROS_DISTRO}-nav2-map-server \
+    ros-${ROS_DISTRO}-nav2-lifecycle-manager \
+    ros-${ROS_DISTRO}-nav-msgs \
+    ros-${ROS_DISTRO}-sensor-msgs \
+    ros-${ROS_DISTRO}-geometry-msgs \
+    ros-${ROS_DISTRO}-pluginlib \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /home/hao/pnc_nav2
+
+COPY entrypoint.sh /entrypoint.sh
+COPY bashrc_pnc_nav.sh /etc/profile.d/pnc_nav.sh
+RUN chmod +x /entrypoint.sh \
+ && mkdir -p /home/hao \
+ && if ! grep -q 'bashrc_pnc_nav\|pnc_nav2 workspace' /root/.bashrc 2>/dev/null; then \
+      printf '\n# pnc_nav2\n[ -f /etc/profile.d/pnc_nav.sh ] && source /etc/profile.d/pnc_nav.sh\n' >> /root/.bashrc; \
+    fi
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bash"]

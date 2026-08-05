@@ -1,0 +1,52 @@
+<?xml version='1.0'?>
+<sdf version="1.7">
+    <model name="warehouse">
+        <pose>0 0 0 0 0 0</pose>
+        <self_collide>false</self_collide>
+        <!-- BASE_LINK FRAME -->
+        <link name="warehouse_base">
+            <pose>0 0 0 0 0 0</pose>
+            <!-- 空心墙碰撞：4 面薄墙挡住激光（库房内部扫描），机器人可在内部自由活动 -->
+            <collision name="wall_east">
+                <pose>15 0 6.3 0 0 0</pose>
+                <geometry><box><size>0.4 50 12.6</size></box></geometry>
+            </collision>
+            <collision name="wall_west">
+                <pose>-15 0 6.3 0 0 0</pose>
+                <geometry><box><size>0.4 50 12.6</size></box></geometry>
+            </collision>
+            <collision name="wall_south">
+                <pose>0 -25 6.3 0 0 0</pose>
+                <geometry><box><size>30.4 0.4 12.6</size></box></geometry>
+            </collision>
+            <collision name="wall_north">
+                <pose>0 25 6.3 0 0 0</pose>
+                <geometry><box><size>30.4 0.4 12.6</size></box></geometry>
+            </collision>
+            <visual name="warehouse_visual">
+                <pose>0 0 0 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <scale>1 1 1</scale>
+                        <uri>meshes/warehouse.dae</uri>
+                    </mesh>
+                </geometry>
+            </visual>
+            <visual name="drop_area_visual">
+                <pose>0 0 0.101 0 0 0</pose>
+                <!-- x y z R P Y -->
+                <geometry>
+                    <mesh>
+                        <scale>1 1 1</scale>
+                        <uri>meshes/warehouse.dae</uri>
+                        <submesh>
+                            <name>drop1</name>
+                            <center>true</center>
+                        </submesh>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <static>1</static>
+    </model>
+</sdf>

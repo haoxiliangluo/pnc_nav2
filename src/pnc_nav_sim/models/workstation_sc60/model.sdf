@@ -1,0 +1,67 @@
+<?xml version='1.0'?>
+<sdf version='1.5'>
+  <model name='workstation_sc60'>
+    <static>1</static>
+    <link name='base_link'>
+      <inertial>
+        <mass>5.0</mass>
+        <inertia>
+          <ixx>0.2</ixx>
+          <iyy>0.2</iyy>
+          <izz>0.05</izz>
+        </inertia>
+      </inertial>
+      <!-- 主体 0.2×0.4×1.05，底面在 z=0 -->
+      <visual name='body_visual'>
+        <pose>0 0 0.525 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.2 0.4 1.05</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.45 0.45 0.48 1</ambient>
+          <diffuse>0.45 0.45 0.48 1</diffuse>
+        </material>
+      </visual>
+      <collision name='body_collision'>
+        <pose>0 0 0.525 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.2 0.4 1.05</size>
+          </box>
+        </geometry>
+      </collision>
+      <!-- 极片同 charge_station_sc60 / sc60 车端：0.03×0.06×0.035，中心 z=0.31 -->
+      <visual name='plate_visual'>
+        <pose>0.115 0 0.31 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.03 0.06 0.035</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.72 0.45 0.2 1</ambient>
+          <diffuse>0.72 0.45 0.2 1</diffuse>
+        </material>
+      </visual>
+      <collision name='plate_contact_collision'>
+        <pose>0.115 0 0.31 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.03 0.06 0.035</size>
+          </box>
+        </geometry>
+      </collision>
+      <!-- 正面垂直 tag：中心离地 432 mm；tag_plate.obj 法向 +Z，pitch=π/2 朝 +X -->
+      <visual name='tag_visual'>
+        <pose>0.101 0 0.432 0 1.5707963267948966 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://workstation_sc60/meshes/tag_plate.obj</uri>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>

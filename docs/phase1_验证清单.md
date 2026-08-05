@@ -21,11 +21,11 @@
 
 - [x] 日志检查
   ```bash
-  # NavServer 启动日志
+  # NavServer 启动日志（maps/111）
   [nav_server]: NavServer initialized, control freq: 20.0 Hz
-  [nav_server]: Received map: 384x384, resolution=0.050
+  [nav_server]: Received map: 615x1334, resolution=0.050
   [nav_server]: AStar2D activated
-  [nav_server]: PurePursuit3D activated
+  [map_io]: Read map .../maps/111/111.png: 615 X 1334 map @ 0.05 m/cell
   ```
 
 ## 📊 已实现功能
@@ -44,8 +44,8 @@
 - [x] DWA3D - 动态窗口（框架，待完善）
 
 ### 仿真环境
-- [x] TurtleBot3 Gazebo World
-- [x] map_server 发布静态地图
+- [x] Gazebo Sim Harmonic playground（`pnc_nav_sim`）
+- [x] map_server 发布静态地图（Map/111）
 - [x] RViz 可视化配置
 
 ### 工具

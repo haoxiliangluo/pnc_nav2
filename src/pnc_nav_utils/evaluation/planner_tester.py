@@ -12,7 +12,7 @@ C++ 全局规划器可视化测试工具
   4. 用 matplotlib 可视化代价地图 + 路径
 
 用法：
-  终端1: ros2 launch pnc_nav_bringup nav_bringup.launch.py
+  终端1: ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py
   终端2: python3 src/pnc_nav_utils/planner_tester.py
 
 交互：
@@ -492,7 +492,7 @@ def main():
     print('C++ AStar2D 规划器测试工具')
     print('='*50)
     print('请确保 NavServer 已启动:')
-    print('  ros2 launch pnc_nav_bringup nav_bringup.launch.py')
+    print('  ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py')
     print()
     print('交互方式:')
     print('  左键点击 → 设置 start 点 (发布 TF)')

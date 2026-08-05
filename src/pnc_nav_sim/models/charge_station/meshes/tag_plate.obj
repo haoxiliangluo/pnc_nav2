@@ -1,0 +1,21 @@
+# Thin plate top face; +Z normal; 0.1 m square (matches URDF collision)
+mtllib tag_plate.mtl
+
+o tag_plate_face
+v -0.05 -0.05 0.0
+v  0.05 -0.05 0.0
+v  0.05  0.05 0.0
+v -0.05  0.05 0.0
+
+# UV 顺时针 90°
+vt 0.0 1.0
+vt 0.0 0.0
+vt 1.0 0.0
+vt 1.0 1.0
+
+vn 0.0 0.0 1.0
+
+usemtl TagFace
+s off
+f 1/1/1 2/2/1 3/3/1
+f 1/1/1 3/3/1 4/4/1

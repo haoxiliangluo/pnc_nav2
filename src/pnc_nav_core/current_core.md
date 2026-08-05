@@ -26,22 +26,25 @@ NavServer 启动
 
 ```bash
 cd ~/pnc_nav2
-colcon build --packages-select pnc_nav_interfaces pnc_nav_core pnc_nav_planners pnc_nav_bringup --symlink-install
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-select pnc_nav_interfaces pnc_nav_core pnc_nav_planners pnc_nav_sim pnc_nav_bringup --parallel-workers 4
 source install/setup.bash
 ```
+
+依赖仅为官方包：`ros-jazzy-ros-gz`、`ros-jazzy-nav2-map-server`、`ros-jazzy-nav2-lifecycle-manager` 等（见仓库 README）。
 
 ### 2. 推荐启动 Phase 1 可复现入口
 
 ```bash
 cd ~/pnc_nav2
+source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 
-ros2 launch pnc_nav_bringup turtlebot3_test.launch.py
+ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py
 ```
 
-该入口会启动 TurtleBot3 Gazebo、`map_server`、`map -> odom` 静态 TF、
-`nav_server` 和 RViz。`sim_2d_bringup.launch.py` 当前也复用这条链路，
-不再依赖源码树里不存在的 `pnc_nav_sim`。
+该入口会启动 Gazebo Harmonic playground、`map_server`（`maps/111`）、`map -> odom` 静态 TF、
+`nav_server` 和 RViz。`turtlebot3_test.launch.py` / `sim_2d_bringup.launch.py` 转发到同一链路。
 
 ### 3. 仅启动 NavServer 的最小调试方式
 

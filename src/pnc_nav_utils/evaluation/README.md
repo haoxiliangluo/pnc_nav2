@@ -12,7 +12,7 @@ cd /home/hao/pnc_nav2
 python3 src/pnc_nav_utils/evaluation/costmap_editor.py
 
 # 2. 启动导航服务器（终端1）
-ros2 launch pnc_nav_bringup nav_bringup.launch.py
+ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py
 
 # 3. 测试 C++ 规划器（终端2）
 python3 src/pnc_nav_utils/evaluation/planner_tester.py
@@ -109,7 +109,7 @@ obstacles: [
 cd /home/hao/pnc_nav2
 
 # 终端1: 启动 NavServer
-ros2 launch pnc_nav_bringup nav_bringup.launch.py
+ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py
 
 gdb -ex run --args /home/hao/pnc_nav2/install/pnc_nav_core/lib/pnc_nav_core/nav_server_node     --ros-args     --params-file /home/hao/pnc_nav2/src/pnc_nav_bringup/config/nav_params.yaml     -p use_sim_time:=false
 

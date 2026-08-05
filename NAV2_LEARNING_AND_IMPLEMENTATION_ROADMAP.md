@@ -1,13 +1,13 @@
 # PNC Nav2 学习与实现路线
 
-这份文档用于指导你自己实现 `pnc_nav2`，目标不是复刻官方 Nav2，而是学习它的架构思想，写出一个面向四足机器人、3D 导航、规划与控制展示的“小型 Nav2-like 系统”。
+这份文档用于指导自己实现 `pnc_nav2`：不是复刻官方 Nav2，而是学习它的架构思想，做出一个面向四足机器人、3D 导航、规划与控制的「小型 Nav2-like」个人项目（后续可能开源）。
 
 核心原则：
 
 - 先跑通 2D 闭环，再扩展 3D。
 - 先写清楚架构和接口，再追求算法复杂度。
 - 官方 Nav2 用来学习工程组织，不直接大量搬代码。
-- 面试重点放在“我为什么这么拆、每层负责什么、怎么从 2D 扩到 3D”。
+- 始终能说清：为什么这么拆、每层负责什么、怎么从 2D 扩到 3D。
 
 ---
 
@@ -109,7 +109,7 @@ IDLE -> PLANNING -> FOLLOWING -> SUCCEEDED
                   -> FAILED
 ```
 
-面试讲法：
+设计说明：
 
 ```text
 我参考了 Nav2 的 planner_server 和 controller_server，但为了项目早期可控，
@@ -151,14 +151,15 @@ Stanley3D
 重点文件：
 
 ```text
-src/pnc_nav_bringup/launch/sim_2d_bringup.launch.py
+src/pnc_nav_bringup/launch/gz_sim_2d_bringup.launch.py
 src/pnc_nav_bringup/config/nav_params.yaml
+src/pnc_nav_bringup/maps/111/111.yaml
 ```
 
 要做成：
 
-- 启动 Gazebo 2D 世界。
-- 启动差速小车模型。
+- Include `pnc_nav_sim/gz_playground.launch.py`。
+- `map_server` 加载 `maps/111`。
 - 启动 `nav_server_node`。
 - 参数中选择 A* + Pure Pursuit 或 A* + DWA。
 - RViz 能看到机器人、TF、`global_plan`、`local_plan`。
@@ -168,16 +169,17 @@ src/pnc_nav_bringup/config/nav_params.yaml
 重点文件：
 
 ```text
-src/pnc_nav_sim/launch/diff_drive_sim.launch.py
-src/pnc_nav_sim/worlds/simple_maze.world
-src/pnc_nav_sim/urdf/diff_drive/diff_drive.urdf.xacro
+src/pnc_nav_sim/launch/gz_playground.launch.py
+src/pnc_nav_sim/worlds/playground.sdf
+src/pnc_nav_sim/urdf/diff_drive.urdf.xacro
+src/pnc_nav_sim/params/bridge.yaml
 ```
 
 要做成：
 
-- Gazebo 能启动 `simple_maze.world`。
-- 差速小车能订阅 `cmd_vel`。
-- 能发布 odom 和 TF。
+- Gazebo Sim Harmonic 能启动 `playground.sdf`。
+- 简易差速车（stock DiffDrive）能订阅 `cmd_vel`。
+- 经 `ros_gz_bridge` 发布 `/odom`、`/tf`、`/clock`。
 
 ### 阶段完成标准
 
@@ -195,7 +197,7 @@ ros2 launch pnc_nav_bringup sim_2d_bringup.launch.py
 4. 在 Gazebo 中移动
 5. 到达目标后停止
 
-面试中这就是你的第一个可演示闭环。
+这就是第一个可演示闭环。
 
 ---
 
@@ -263,7 +265,7 @@ ros2 launch pnc_nav_bringup sim_2d_bringup.launch.py
 - DWA 局部轨迹
 - 修改参数后机器人行为变化
 
-面试讲法：
+设计说明：
 
 ```text
 我把算法都做成 pluginlib 插件，所以同一个 NavServer 不需要改代码，
@@ -315,7 +317,7 @@ AStar3D -> OctoMap / Traversability costmap
 
 这就是接口抽象的价值。
 
-面试讲法：
+设计说明：
 
 ```text
 Nav2 原生主要面向 2D costmap，我这里把地图查询抽象成 CostmapInterface。
@@ -351,7 +353,7 @@ Navigation Layer -> cmd_vel -> Locomotion Layer -> joint commands
 - 继续保留 `cmd_vel` 作为导航层输出。
 - 真四足模型可以考虑 CHAMP 或已有 locomotion。
 - 你的 `pnc_nav_control` 后续再实现 RL / MPC / CPG 步态接口。
-- 面试项目重点仍然放在规划、避障、路径跟踪、可通行性。
+- 项目重点仍然放在规划、避障、路径跟踪、可通行性。
 
 ### 阶段完成标准
 
@@ -361,7 +363,7 @@ Navigation Layer -> cmd_vel -> Locomotion Layer -> joint commands
 - 导航层不关心底层是差速小车还是四足机器人。
 - 能解释为什么 `cmd_vel` 是导航层和运动层之间的边界。
 
-面试讲法：
+设计说明：
 
 ```text
 我没有一开始把导航和步态控制耦合在一起。
@@ -406,7 +408,7 @@ nav2_behavior_tree
 - 能取消当前目标。
 - 能处理连续目标点。
 
-面试讲法：
+设计说明：
 
 ```text
 我早期用简单状态机降低复杂度。
@@ -439,37 +441,37 @@ nav2_behavior_tree
 
 ---
 
-## 九、每个阶段你应该能讲什么
+## 九、每个阶段应能说清什么
 
-### 阶段 1 能讲
+### 阶段 1
 
 ```text
 我参考 Nav2 架构，实现了一个最小导航闭环。
 它能接收目标点，调用全局规划插件，生成路径，再调用控制插件输出速度。
 ```
 
-### 阶段 2 能讲
+### 阶段 2
 
 ```text
 我把 A*、Pure Pursuit、DWA 都做成插件。
 这样框架和算法解耦，后续算法替换不需要改 NavServer。
 ```
 
-### 阶段 3 能讲
+### 阶段 3
 
 ```text
 我通过 CostmapInterface 抽象地图查询，
 让同一个规划器既能跑 2D costmap，也能跑 3D OctoMap 或可通行性地图。
 ```
 
-### 阶段 4 能讲
+### 阶段 4
 
 ```text
 导航层输出 cmd_vel，运动层负责步态控制。
 这个边界让系统可以先用差速小车验证，再迁移到四足机器人。
 ```
 
-### 阶段 5 能讲
+### 阶段 5
 
 ```text
 早期我用状态机保证系统简单稳定。
@@ -478,7 +480,7 @@ nav2_behavior_tree
 
 ---
 
-## 十、最小可展示版本定义
+## 十、最小可运行版本定义
 
 如果时间有限，优先做到这个版本：
 
@@ -493,7 +495,7 @@ Gazebo simple_maze
   + cmd_vel output
 ```
 
-这个版本足够面试讲清楚：
+这个版本应能说清：
 
 - 架构分层
 - 插件化

@@ -1,0 +1,13 @@
+material charge_link
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture model://charge_station/meshes/tag25h7_00100.png
+      }
+    }
+  }
+}

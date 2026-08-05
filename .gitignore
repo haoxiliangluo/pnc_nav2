@@ -36,3 +36,6 @@ Thumbs.db
 *.tmp
 nav_quality_latest.json
 nav_quality_results.csv
+
+# 地图文件（体积大，不入库）
+maps/

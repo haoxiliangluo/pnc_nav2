@@ -2,7 +2,7 @@
 
 ## 项目定位
 
-面向规控岗面试的开源项目，核心展示：**三维导航中的规划与控制能力**。
+个人独立维护的导航规控项目，后续可能开源；核心聚焦：**三维导航中的规划与控制能力**。
 支持仿真验证 → 真实机器狗部署的完整链路，规划和控制模块插件化可替换。
 
 ---
@@ -185,7 +185,7 @@ pnc_nav2/                            # 顶层工作空间
 │   │   ├── lidar_odom/              # LiDAR里程计 (Fast-LIO2接口)
 │   │   └── pose_estimator/          # 位姿融合
 │   │
-│   ├── pnc_nav_planners/           # 规划器插件集合 ★核心展示★
+│   ├── pnc_nav_planners/           # 规划器插件集合 ★核心★
 │   │   ├── global_planners/
 │   │   │   ├── astar_3d/            # A* on OctoMap
 │   │   │   ├── rrt_star_3d/         # RRT* 三维
@@ -201,17 +201,18 @@ pnc_nav2/                            # 顶层工作空间
 │   │       ├── stanley_3d/          # Stanley控制器
 │   │       └── mpc_tracker/         # MPC路径跟踪
 │   │
-│   ├── pnc_nav_control/            # 运动控制 ★核心展示★
+│   ├── pnc_nav_control/            # 运动控制 ★核心★
 │   │   ├── locomotion_interface/    # 步态控制器接口
 │   │   ├── rl_locomotion/           # RL步态策略 (libtorch推理)
 │   │   ├── mpc_locomotion/          # MPC步态控制
 │   │   └── vel_smoother/            # 速度平滑
 │   │
-│   ├── pnc_nav_sim/                # 仿真环境（经典 Gazebo）
-│   │   ├── worlds/                  # Gazebo 世界文件
-│   │   ├── urdf/diff_drive/         # 差速小车（自有）
-│   │   ├── urdf/unitree_go2/        # Go2（复用 go2_description 网格 + planar_move）
-│   │   └── urdf/sensors/            # 通用传感器宏（Mid360 / IMU）
+│   ├── pnc_nav_sim/                # 仿真环境（Gazebo Sim Harmonic）
+│   │   ├── worlds/playground.sdf    # warehouse playground 世界（已 vendored）
+│   │   ├── models/                  # playground 引用的模型资源
+│   │   ├── urdf/diff_drive.urdf.xacro  # 简易差速车（stock DiffDrive）
+│   │   ├── params/bridge.yaml       # ros_gz_bridge
+│   │   └── launch/gz_playground.launch.py
 │   │
 │   └── pnc_nav_utils/              # 工具库
 │       ├── visualization/           # RViz可视化工具
@@ -236,9 +237,9 @@ pnc_nav2/                            # 顶层工作空间
 ### Phase 1: 2D仿真验证 (基础架构)
 **目标**: 验证整体框架、接口设计、插件机制
 
-- [ ] 搭建ROS 2 Humble工作空间
+- [ ] 搭建ROS 2 Jazzy工作空间
 - [ ] 实现 `pnc_nav_core` 插件框架
-- [ ] 2D Gazebo环境 + 差速小车模型
+- [ ] 2D Gazebo Sim (Harmonic) + 差速小车模型
 - [ ] 实现 A* 全局规划 (2D)
 - [ ] 实现 DWA 局部规划 (2D)
 - [ ] 实现 Pure Pursuit 路径跟踪
@@ -256,7 +257,7 @@ pnc_nav2/                            # 顶层工作空间
 - [ ] 地图服务 (保存/加载/切换)
 
 ### Phase 3: 3D规划与控制 ★核心★
-**目标**: 展示规控能力，插件化多算法对比
+**目标**: 做实规控主线，插件化多算法对比
 
 - [ ] A* 3D on OctoMap
 - [ ] RRT* 3D
@@ -325,25 +326,25 @@ pnc_nav2/                            # 顶层工作空间
 
 | 维度 | 选择 | 理由 |
 |------|------|------|
-| ROS版本 | ROS 2 Humble | LTS，生态成熟，Nav2兼容 |
+| ROS版本 | ROS 2 Jazzy | 与 Gazebo Harmonic / ros_gz 官方栈一致 |
 | 语言 | C++ (核心) + Python (工具/训练) | 性能 + 灵活性 |
 | 构建 | colcon + CMake | ROS 2标准 |
 | 3D地图 | OctoMap + Grid Map | 成熟、轻量、Nav2生态兼容 |
-| 仿真 | Gazebo Classic → Ignition | 社区支持好 |
+| 仿真 | Gazebo Sim Harmonic + ros_gz | playground 世界 + stock DiffDrive |
 | RL框架 | Isaac Gym (训练) + libtorch (部署) | 高效并行训练 |
 | CI/CD | GitHub Actions | 自动构建+测试 |
 | 容器化 | Docker | 环境一致性 |
 
 ---
 
-## 七、面试亮点设计
+## 七、设计侧重点
 
-1. **插件化架构**: 展示软件工程能力，pluginlib实现算法热插拔
-2. **多算法对比**: 同一场景下A*/RRT*/MPC/DRL的benchmark，展示对算法的理解深度
-3. **分层解耦**: 规划层与控制层完全解耦，展示系统设计能力
-4. **Sim-to-Real**: 仿真→真机的完整链路，展示工程落地能力
-5. **评估体系**: 量化指标 (路径长度、平滑度、计算耗时、成功率)，展示科学思维
-6. **渐进式开发**: 2D验证→3D扩展→真机部署，展示项目管理能力
+1. **插件化架构**: pluginlib 实现算法热插拔，方便对比与迭代
+2. **多算法对比**: 同一场景下 A*/RRT*/MPC/DRL 的 benchmark，用数据验证取舍
+3. **分层解耦**: 规划层与控制层分离，便于换平台、换算法
+4. **Sim-to-Real**: 仿真 → 真机的完整链路，工程可落地
+5. **评估体系**: 路径长度、平滑度、耗时、成功率等量化指标
+6. **渐进式开发**: 2D 验证 → 3D 扩展 → 真机部署，控制复杂度膨胀
 
 ---
 
@@ -357,7 +358,7 @@ pnc_nav2/                            # 顶层工作空间
 - 全局规划: 自研3D规划器 ★重点★，同时提供Nav2 adapter对比
 - 局部规划: 自研多种3D局部规划器 ★重点★
 - 路径跟踪: 自研多种控制器 ★重点★
-- 步态控制: RL策略推理 ★亮点★
+- 步态控制: RL策略推理（进阶方向）
 - 行为管理: 可复用Nav2的BT框架
 - 恢复行为: 可复用Nav2的recovery机制
 ```
