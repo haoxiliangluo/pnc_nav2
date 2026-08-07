@@ -5,8 +5,6 @@ Panels:
     Name: Views
   - Class: rviz_common/Tool Properties
     Name: Tool Properties
-  - Class: pnc_nav_rviz/PncPanel
-    Name: PNC 控制面板
 
 Visualization Manager:
   Class: ""
@@ -41,19 +39,6 @@ Visualization Manager:
       Use Timestamp: false
       Value: true
 
-    - Alpha: 0.8
-      Class: rviz_default_plugins/Map
-      Enabled: true
-      Name: Costmap
-      Topic:
-        Depth: 1
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /costmap
-      Use Timestamp: false
-      Value: true
-
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
@@ -64,10 +49,10 @@ Visualization Manager:
 
     - Alpha: 1
       Autocompute Intensity Bounds: true
-      Class: rviz_default_plugins/LaserScan
+      Class: rviz_default_plugins/PointCloud2
       Enabled: true
-      Name: LaserScan
-      Topic: /scan
+      Name: PointCloud2
+      Topic: /points
 
   Global Options:
     Fixed Frame: map

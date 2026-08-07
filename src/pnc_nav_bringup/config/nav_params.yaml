@@ -69,13 +69,13 @@ nav_server:
       min_vel_x: 0.0
       acc_lim_x: 1.0
       acc_lim_y: 0.0
-      acc_lim_theta: 2.0
+      acc_lim_theta: 3.0
       sim_time: 1.0
       vx_samples: 12
       vy_samples: 1
       vtheta_samples: 21
       dt: 0.1
       path_distance_bias: 32.0
-      goal_distance_bias: 20.0
+      goal_distance_bias: 12.0
       obstacle_cost_bias: 0.3
-      heading_distance_bias: 15.0
+      heading_distance_bias: 25.0

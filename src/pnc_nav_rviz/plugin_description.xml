@@ -1,0 +1,9 @@
+<library path="pnc_panel">
+
+  <class name="pnc_nav_rviz/PncPanel"
+         type="pnc_nav_rviz::PncPanel"
+         base_class_type="rviz_common::Panel">
+    <description>PNC 控制面板：建图 / 移动控制 / 重定位 / 扩展</description>
+  </class>
+
+</library>

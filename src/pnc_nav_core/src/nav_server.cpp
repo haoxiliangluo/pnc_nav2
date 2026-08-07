@@ -60,6 +60,7 @@ void NavServer::initialize()
   global_plan_pub_ = create_publisher<nav_msgs::msg::Path>("global_plan", 10);
   local_plan_pub_ = create_publisher<nav_msgs::msg::Path>("local_plan", 10);
   cmd_vel_pub_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+  costmap_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>("costmap", 1);
 
   // 订阅目标点
   goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
@@ -188,6 +189,50 @@ bool NavServer::switchPathTracker(const std::string & plugin_name)
   }
 }
 
+void NavServer::publishCostmap()
+{
+  if (!costmap_ || !costmap_pub_) {
+    return;
+  }
+  double min_x, min_y, min_z, max_x, max_y, max_z;
+  costmap_->getBounds(min_x, min_y, min_z, max_x, max_y, max_z);
+  const double res = costmap_->getResolution();
+  const int width = static_cast<int>((max_x - min_x) / res);
+  const int height = static_cast<int>((max_y - min_y) / res);
+  if (width <= 0 || height <= 0 || width * height > 4000 * 4000) {
+    return;
+  }
+
+  nav_msgs::msg::OccupancyGrid msg;
+  msg.header.frame_id = "map";
+  msg.header.stamp = now();
+  msg.info.resolution = res;
+  msg.info.width = width;
+  msg.info.height = height;
+  msg.info.origin.position.x = min_x;
+  msg.info.origin.position.y = min_y;
+  msg.data.resize(width * height);
+  for (int gy = 0; gy < height; ++gy) {
+    for (int gx = 0; gx < width; ++gx) {
+      const double wx = min_x + (gx + 0.5) * res;
+      const double wy = min_y + (gy + 0.5) * res;
+      const uint8_t cost = costmap_->getCost(wx, wy, 0.0);
+      int8_t v;
+      if (cost == cost_values::UNKNOWN) {
+        v = -1;
+      } else if (cost >= cost_values::LETHAL) {
+        v = 100;
+      } else if (cost >= cost_values::INSCRIBED) {
+        v = 99;
+      } else {
+        v = static_cast<int8_t>(cost * 98 / cost_values::INSCRIBED);
+      }
+      msg.data[gy * width + gx] = v;
+    }
+  }
+  costmap_pub_->publish(msg);
+}
+
 void NavServer::transitionTo(NavState new_state)
 {
   const char* state_names[] = {"IDLE", "PLANNING", "FOLLOWING", "RECOVERING", "SUCCEEDED", "FAILED"};
@@ -228,6 +273,12 @@ void NavServer::goalCallback(const geometry_msgs::msg::PoseStamped::SharedPtr ms
 
 void NavServer::controlLoop()
 {
+  // 代价地图可视化：每 10 帧（约 0.5s）发布一次（任意状态）
+  if (costmap_frame_count_++ % 10 == 0) {
+    fprintf(stderr, "CL: publishCostmap start\n");
+    publishCostmap();
+    fprintf(stderr, "CL: publishCostmap done\n");
+  }
   switch (state_) {
     case NavState::IDLE:
       break;

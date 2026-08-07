@@ -31,8 +31,11 @@ def _launch_setup(context, *args, **kwargs):
     pkg_share = get_package_share_directory('pnc_nav_sim')
     ros_gz_sim_share = get_package_share_directory('ros_gz_sim')
 
-    xacro_path = os.path.join(pkg_share, 'urdf', 'diff_drive.urdf.xacro')
-    bridge_config = os.path.join(pkg_share, 'params', 'bridge.yaml')
+    # 可选 urdf / bridge：默认 2D（diff_drive + bridge.yaml），3D 传 diff_drive_3d + bridge_3d
+    urdf_name = LaunchConfiguration('robot_urdf').perform(context)
+    bridge_name = LaunchConfiguration('bridge_config').perform(context)
+    xacro_path = os.path.join(pkg_share, 'urdf', urdf_name)
+    bridge_config = os.path.join(pkg_share, 'params', bridge_name)
     world_path = os.path.join(pkg_share, 'worlds', 'playground.sdf')
     urdf_file, robot_description = _materialize_robot_urdf(xacro_path)
 
@@ -114,7 +117,9 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         DeclareLaunchArgument('x_pose', default_value='0.0'),
         DeclareLaunchArgument('y_pose', default_value='0.0'),
-        DeclareLaunchArgument('z_pose', default_value='0.15'),
+        DeclareLaunchArgument('z_pose', default_value='0.08'),
+        DeclareLaunchArgument('robot_urdf', default_value='diff_drive.urdf.xacro'),
+        DeclareLaunchArgument('bridge_config', default_value='bridge.yaml'),
         DeclareLaunchArgument(
             'use_gui',
             default_value='true',

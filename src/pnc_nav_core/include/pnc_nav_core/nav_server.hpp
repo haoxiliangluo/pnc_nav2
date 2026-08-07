@@ -11,6 +11,7 @@
 #include "pluginlib/class_loader.hpp"
 #include "nav_msgs/msg/path.hpp"
 #include "nav_msgs/msg/odometry.hpp"
+#include "nav_msgs/msg/occupancy_grid.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "tf2_ros/buffer.h"
@@ -95,6 +96,9 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr global_plan_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr local_plan_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_pub_;
+  uint32_t costmap_frame_count_{0};
+  void publishCostmap();
 
   // --- 订阅者 ---
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;

@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-robot-state-publisher \
     ros-${ROS_DISTRO}-xacro \
     ros-${ROS_DISTRO}-tf2-ros \
+    fonts-noto-cjk \
     ros-${ROS_DISTRO}-tf2-geometry-msgs \
     ros-${ROS_DISTRO}-nav2-map-server \
     ros-${ROS_DISTRO}-nav2-lifecycle-manager \
