@@ -208,7 +208,7 @@ private:
   // --- 参数 ---
   double control_frequency_{20.0};// 控制循环频率 (Hz)
   double goal_tolerance_dist_{0.15};// 到达目标的距离容差 (m)
-  double goal_tolerance_angle_{0.1};// 到达目标的角度容差 (rad)
+  double goal_tolerance_angle_{0.0};// 终点朝向容差 (rad)；0 = 不检查
   int max_planning_retries_{3};// 最大恢复/重规划次数
   std::string global_frame_{"map"};
   std::string robot_frame_{"base_link"};

@@ -67,7 +67,7 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `control_frequency` | double | 20.0 | 20.0 | 控制循环频率。调高更跟手但更吃 CPU |
 | `global_frame` / `robot_frame` | string | `map` / `base_link` | 同 | TF 查询用 |
 | `goal_tolerance_dist` | double | 0.15 | 0.15 | 到达距离容差（传给插件）。太小会"到不了"，太大会"提前停" |
-| `goal_tolerance_angle` | double | 0.1 | 0.1 | 角度容差（仅部分插件使用） |
+| `goal_tolerance_angle` | double | 0.0 | 0.0 | 终点朝向容差；**0 = 不检查**（仅 DWA2D 支持终点对齐） |
 | `max_planning_retries` | int | 3 | 3 | 恢复次数上限。0 = 不恢复，一次失败就结束 |
 | `global_planner_plugin` | string | `AStar3D` | `AStar2D` | 默认全局插件 |
 | `local_planner_plugin` | string | `""` | `""` | 非空则优先用局部规划器（与 tracker 二选一） |

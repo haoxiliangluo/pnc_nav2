@@ -240,7 +240,7 @@ sequenceDiagram
 
 **已知限制（按影响排序）**
 
-1. **到达判定由插件决定**：`PurePursuit2D` 用"到路径末点距离"，`DWA2D` 用"距离+角度"，而 feedback 的 `distance_remaining` 是"到目标点直线距离"——会出现 `dist=0.20` 却已成功的情况（见 `notes/known_issues.md`）。
+1. **到达判定是"距离优先"**：`goal_tolerance_dist`（默认 0.15m）满足即到达；终点朝向可选（`goal_tolerance_angle`，默认 0 = 关闭）。`PurePursuit2D` 用"到路径末点距离"（路径末点≈目标），`DWA2D` 用"到目标距离（+ 可选朝向）"，两者在默认配置下等价。
 2. **不周期性重规划**：`FOLLOWING` 中只有卡住检测，没有局部避障失败后重规划（等 obstacle layer）。
 3. **恢复只清激光障碍点**：进入 `RECOVERING` 会调用 `RollingCostmap::clear()`，但不清静态图（静态层本就无状态）。
 4. **单会话模型**：不支持目标队列；新目标抢占旧目标。
@@ -259,7 +259,7 @@ sequenceDiagram
 | `global_frame` | string | `map` | — | 全局坐标系 |
 | `robot_frame` | string | `base_link` | — | 机器人本体坐标系 |
 | `goal_tolerance_dist` | double | 0.15 | m | 到达判定距离容差（传给插件） |
-| `goal_tolerance_angle` | double | 0.1 | rad | 到达判定角度容差（仅部分插件使用） |
+| `goal_tolerance_angle` | double | **0.0** | rad | 终点朝向容差；**0 = 不检查**（只用距离判定）。仅 `DWA2D` 支持终点对齐 |
 | `max_planning_retries` | int | 3 | 次 | 恢复/重规划次数上限 |
 | `global_planner_plugin` | string | `pnc_nav_planners::AStar3D` | — | 默认全局插件（yaml 中为 `AStar2D`） |
 | `local_planner_plugin` | string | `""` | — | 非空则用局部规划器（与 tracker 二选一） |

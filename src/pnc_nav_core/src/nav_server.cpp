@@ -82,7 +82,7 @@ NavServer::NavServer(const rclcpp::NodeOptions & options)
   // 声明参数
   declare_parameter("control_frequency", 20.0);
   declare_parameter("goal_tolerance_dist", 0.15);
-  declare_parameter("goal_tolerance_angle", 0.1);
+  declare_parameter("goal_tolerance_angle", 0.0);  // 0 = 不检查终点朝向
   declare_parameter("max_planning_retries", 3);
   declare_parameter("global_frame", "map");
   declare_parameter("robot_frame", "base_link");

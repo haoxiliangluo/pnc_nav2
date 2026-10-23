@@ -126,22 +126,27 @@ bool DWA2D::setPath(const nav_msgs::msg::Path & path)
         double dx = goal.pose.position.x - current_pose.pose.position.x;
         double dy = goal.pose.position.y - current_pose.pose.position.y;
         double distance = std::hypot(dx,dy);
-        double goal_yaw = tf2::getYaw(goal.pose.orientation);
-        double current_yaw = tf2::getYaw(current_pose.pose.orientation);
-        double dtheta = goal_yaw - current_yaw;
-        dtheta = std::atan2(std::sin(dtheta),std::cos(dtheta));
-        if(distance<=dist_tolerance)
-        {
-            RCLCPP_DEBUG(node_->get_logger(), "与目标距离差达到");
-            if(std::abs(dtheta) <= angle_tolerance)
-            {
-                RCLCPP_DEBUG(node_->get_logger(), "与目标角度差达到");
-                return true;
-            }
-            RCLCPP_DEBUG(node_->get_logger(), "与目标角度差未达到");
+        if (distance > dist_tolerance) {
+            RCLCPP_DEBUG(node_->get_logger(), "与目标距离差未达到");
             return false;
         }
-        RCLCPP_DEBUG(node_->get_logger(), "与目标距离差未达到");
+
+        // 终点朝向是可选要求：angle_tolerance <= 0 表示"只看距离，不管朝向"。
+        // 默认关闭，避免机器人到点后为了转正朝向而原地磨、甚至触发卡住恢复（KI-004）。
+        if (angle_tolerance <= 0.0) {
+            RCLCPP_DEBUG(node_->get_logger(), "到达目标（不检查朝向）");
+            return true;
+        }
+
+        double goal_yaw = tf2::getYaw(goal.pose.orientation);
+        double current_yaw = tf2::getYaw(current_pose.pose.orientation);
+        double dtheta = std::atan2(
+            std::sin(goal_yaw - current_yaw), std::cos(goal_yaw - current_yaw));
+        if (std::abs(dtheta) <= angle_tolerance) {
+            RCLCPP_DEBUG(node_->get_logger(), "与目标角度差达到");
+            return true;
+        }
+        RCLCPP_DEBUG(node_->get_logger(), "与目标角度差未达到");
         return false;
     }
 
