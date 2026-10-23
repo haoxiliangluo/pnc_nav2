@@ -56,9 +56,12 @@ void AStar2D::deactivate()
 
 void AStar2D::cleanup()
 {
+  // 注意：日志要在 reset 之前打，否则 node_ 为空会段错误（切插件时必现）
+  if (node_) {
+    RCLCPP_INFO(node_->get_logger(), "AStar2D cleaned up");
+  }
   node_.reset();
   costmap_.reset();
-  RCLCPP_INFO(node_->get_logger(), "AStar2D cleaned up");
 }
 
 GridIndex AStar2D::worldToGrid(double x, double y) const

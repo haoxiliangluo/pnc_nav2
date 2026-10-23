@@ -1,0 +1,7 @@
+<!-- 教学示例：直线规划器插件 -->
+<library path="straight_line_planner">
+  <class type="pnc_nav_examples::StraightLinePlanner"
+         base_class_type="pnc_nav_core::GlobalPlannerBase">
+    <description>示例插件：不做搜索，直接输出起点到目标的直线路径（用于学习插件接口与热插拔）</description>
+  </class>
+</library>

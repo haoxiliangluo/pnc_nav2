@@ -111,6 +111,7 @@ private:
   GlobalPlannerBase::SharedPtr global_planner_;
   LocalPlannerBase::SharedPtr local_planner_;
   PathTrackerBase::SharedPtr path_tracker_;
+  std::string current_global_plugin_;// 已加载的全局插件类名（switch 时用于短路）
 
   void loadPlugins();
   bool switchGlobalPlanner(const std::string & plugin_name);

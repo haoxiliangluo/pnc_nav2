@@ -184,6 +184,7 @@ void NavServer::loadPlugins()
     global_planner_ = global_planner_loader_.createSharedInstance(global_plugin_name);
     global_planner_->configure(shared_from_this(), "global_planner", costmap_);
     global_planner_->activate();
+    current_global_plugin_ = global_plugin_name;
     RCLCPP_INFO(get_logger(), "Loaded global planner: %s", global_plugin_name.c_str());
   } catch (const pluginlib::PluginlibException & ex) {
     RCLCPP_ERROR(get_logger(), "Failed to load global planner '%s': %s",
@@ -219,8 +220,8 @@ void NavServer::loadPlugins()
 bool NavServer::switchGlobalPlanner(const std::string & plugin_name)
 {
   try {
-    if (global_planner_ && global_planner_->getName() == plugin_name) {
-      return true;  // 已经是目标插件，无需要切换
+    if (global_planner_ && current_global_plugin_ == plugin_name) {
+      return true;  // 已经是目标插件，无需切换
     }
     if (global_planner_) {
       global_planner_->deactivate();
@@ -230,6 +231,7 @@ bool NavServer::switchGlobalPlanner(const std::string & plugin_name)
     global_planner_ = global_planner_loader_.createSharedInstance(plugin_name);
     global_planner_->configure(shared_from_this(), "global_planner", costmap_);
     global_planner_->activate();
+    current_global_plugin_ = plugin_name;
     RCLCPP_INFO(get_logger(), "Switched global planner to: %s", plugin_name.c_str());
     return true;
   } catch (const pluginlib::PluginlibException & ex) {
