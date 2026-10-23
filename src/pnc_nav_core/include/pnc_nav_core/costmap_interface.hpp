@@ -105,6 +105,12 @@ public:
    * @brief 获取地图坐标系
    */
   virtual std::string getFrameId() const = 0;
+
+  /**
+   * @brief 清空动态层（恢复行为用；静态图实现可以为空操作）
+   */
+  virtual void clear() {}
+
 };
 
 }  // namespace pnc_nav_core

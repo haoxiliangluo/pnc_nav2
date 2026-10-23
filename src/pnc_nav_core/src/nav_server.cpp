@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "pnc_nav_core/nav2_costmap_adapter.hpp"
+#include "pnc_nav_core/rolling_costmap.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace pnc_nav_core
@@ -128,14 +129,19 @@ void NavServer::initialize()
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  // 使用Nav2 costmap adapter订阅/map
-  costmap_ = std::make_shared<Nav2CostmapAdapter>(shared_from_this());
+  // 代价地图分两层（对齐 Nav2 的 global/local 概念）：
+  // - 全局：静态 /map（给全局规划器，保证能看到整个地图）
+  // - 局部：滚动窗口 + 激光障碍层（给局部规划器做避障）
+  static_costmap_ = std::make_shared<Nav2CostmapAdapter>(shared_from_this());
+  local_costmap_ = std::make_shared<RollingCostmap>(
+    shared_from_this(), tf_buffer_, static_costmap_);
 
   // 发布者
   global_plan_pub_ = create_publisher<nav_msgs::msg::Path>("global_plan", 10);
   local_plan_pub_ = create_publisher<nav_msgs::msg::Path>("local_plan", 10);
   cmd_vel_pub_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
   costmap_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>("costmap", 1);
+  obstacle_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>("obstacle_layer", 1);
 
   // 订阅目标点（兼容入口）
   goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
@@ -182,7 +188,7 @@ void NavServer::loadPlugins()
 
   try {
     global_planner_ = global_planner_loader_.createSharedInstance(global_plugin_name);
-    global_planner_->configure(shared_from_this(), "global_planner", costmap_);
+    global_planner_->configure(shared_from_this(), "global_planner", static_costmap_);
     global_planner_->activate();
     current_global_plugin_ = global_plugin_name;
     RCLCPP_INFO(get_logger(), "Loaded global planner: %s", global_plugin_name.c_str());
@@ -194,7 +200,7 @@ void NavServer::loadPlugins()
   if (!local_plugin_name.empty()) {
     try {
       local_planner_ = local_planner_loader_.createSharedInstance(local_plugin_name);
-      local_planner_->configure(shared_from_this(), "local_planner", costmap_);
+      local_planner_->configure(shared_from_this(), "local_planner", local_costmap_);
       local_planner_->activate();
       RCLCPP_INFO(get_logger(), "Loaded local planner: %s", local_plugin_name.c_str());
       return;
@@ -229,7 +235,7 @@ bool NavServer::switchGlobalPlanner(const std::string & plugin_name)
       global_planner_.reset();
     }
     global_planner_ = global_planner_loader_.createSharedInstance(plugin_name);
-    global_planner_->configure(shared_from_this(), "global_planner", costmap_);
+    global_planner_->configure(shared_from_this(), "global_planner", static_costmap_);
     global_planner_->activate();
     current_global_plugin_ = plugin_name;
     RCLCPP_INFO(get_logger(), "Switched global planner to: %s", plugin_name.c_str());
@@ -248,7 +254,7 @@ bool NavServer::switchLocalPlanner(const std::string & plugin_name)
       local_planner_->cleanup();
     }
     local_planner_ = local_planner_loader_.createSharedInstance(plugin_name);
-    local_planner_->configure(shared_from_this(), "local_planner", costmap_);
+    local_planner_->configure(shared_from_this(), "local_planner", local_costmap_);
     local_planner_->activate();
     path_tracker_.reset();
     RCLCPP_INFO(get_logger(), "Switched local planner to: %s", plugin_name.c_str());
@@ -442,6 +448,9 @@ bool NavServer::enterRecovery(const std::string & reason)
   RCLCPP_WARN(
     get_logger(), "Entering recovery (%s), attempt %u/%d",
     reason.c_str(), recovery_count_, max_planning_retries_);
+  if (local_costmap_) {
+    local_costmap_->clear();  // 清掉可能残留的激光障碍点，避免"顶着幻影障碍"反复卡住
+  }
   recovery_start_time_ = std::chrono::steady_clock::now();
   has_last_progress_ = false;
   transitionTo(NavState::RECOVERING);
@@ -503,46 +512,32 @@ bool NavServer::getCurrentPose(geometry_msgs::msg::PoseStamped & pose)
 
 void NavServer::publishCostmap()
 {
-  if (!costmap_ || !costmap_pub_) {
-    return;
-  }
-  double min_x, min_y, min_z, max_x, max_y, max_z;
-  costmap_->getBounds(min_x, min_y, min_z, max_x, max_y, max_z);
-  const double res = costmap_->getResolution();
-  const int width = static_cast<int>((max_x - min_x) / res);
-  const int height = static_cast<int>((max_y - min_y) / res);
-  if (width <= 0 || height <= 0 || width * height > 4000 * 4000) {
+  if (!local_costmap_ || !costmap_pub_ || !local_costmap_->enabled()) {
     return;
   }
 
-  nav_msgs::msg::OccupancyGrid msg;
-  msg.header.frame_id = "map";
-  msg.header.stamp = now();
-  msg.info.resolution = res;
-  msg.info.width = width;
-  msg.info.height = height;
-  msg.info.origin.position.x = min_x;
-  msg.info.origin.position.y = min_y;
-  msg.data.resize(width * height);
-  for (int gy = 0; gy < height; ++gy) {
-    for (int gx = 0; gx < width; ++gx) {
-      const double wx = min_x + (gx + 0.5) * res;
-      const double wy = min_y + (gy + 0.5) * res;
-      const uint8_t cost = costmap_->getCost(wx, wy, 0.0);
-      int8_t v;
-      if (cost == cost_values::UNKNOWN) {
-        v = -1;
-      } else if (cost >= cost_values::LETHAL) {
-        v = 100;
-      } else if (cost >= cost_values::INSCRIBED) {
-        v = 99;
-      } else {
-        v = static_cast<int8_t>(cost * 98 / cost_values::INSCRIBED);
-      }
-      msg.data[gy * width + gx] = v;
-    }
+  // 合并窗口（静态障碍 + 激光障碍 + 膨胀）
+  auto merged = local_costmap_->toOccupancyGrid(false);
+  merged.header.stamp = now();
+  costmap_pub_->publish(merged);
+
+  // 只有激光障碍的窗口（调试/教学：确认障碍层真的在工作）
+  if (obstacle_pub_) {
+    auto obstacles = local_costmap_->toOccupancyGrid(true);
+    obstacles.header.stamp = now();
+    obstacle_pub_->publish(obstacles);
   }
-  costmap_pub_->publish(msg);
+}
+
+void NavServer::updateLocalCostmap()
+{
+  if (!local_costmap_ || !local_costmap_->enabled()) {
+    return;
+  }
+  geometry_msgs::msg::PoseStamped pose;
+  if (getCurrentPose(pose)) {
+    local_costmap_->update(pose);
+  }
 }
 
 void NavServer::transitionTo(NavState new_state)
@@ -557,6 +552,9 @@ void NavServer::transitionTo(NavState new_state)
 
 void NavServer::controlLoop()
 {
+  // 局部代价地图（滚动窗口 + 障碍层）：每周期更新，代价是"有新扫描/机器人移动超过阈值"才重建
+  updateLocalCostmap();
+
   // 代价地图可视化：每 10 帧（约 0.5s）发布一次（任意状态）
   if (costmap_frame_count_++ % 10 == 0) {
     publishCostmap();

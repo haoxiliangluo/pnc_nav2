@@ -12,6 +12,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -22,6 +23,7 @@ set(dependencies
   rclcpp_action
   pluginlib
   nav_msgs
+  sensor_msgs
   geometry_msgs
   tf2_ros
   tf2_geometry_msgs
@@ -32,6 +34,7 @@ set(dependencies
 add_library(nav_server SHARED
   src/nav_server.cpp
   src/nav2_costmap_adapter.cpp
+  src/rolling_costmap.cpp
 )
 target_include_directories(nav_server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

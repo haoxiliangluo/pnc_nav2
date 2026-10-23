@@ -48,7 +48,8 @@
 | `global_plan` | `nav_msgs/msg/Path` | 每次规划成功时 | 全局路径（RViz 可视化 / 评估脚本） |
 | `local_plan` | `nav_msgs/msg/Path` | 跟随中每周期（插件提供时） | 局部轨迹 |
 | `cmd_vel` | `geometry_msgs/msg/Twist` | 跟随中每周期；退出时发一次零速 | 运动指令 |
-| `costmap` | `nav_msgs/msg/OccupancyGrid` | 每 10 个控制周期（20Hz → 2Hz） | 代价地图可视化 |
+| `costmap` | `nav_msgs/msg/OccupancyGrid` | 每 10 个控制周期（20Hz → 2Hz） | **局部滚动窗口**（8m，静态+激光+膨胀） |
+| `obstacle_layer` | `nav_msgs/msg/OccupancyGrid` | 同上 | 仅激光障碍的窗口（调试/教学） |
 
 ### 2.3 Action（主入口）
 
@@ -241,7 +242,7 @@ sequenceDiagram
 
 1. **到达判定由插件决定**：`PurePursuit2D` 用"到路径末点距离"，`DWA2D` 用"距离+角度"，而 feedback 的 `distance_remaining` 是"到目标点直线距离"——会出现 `dist=0.20` 却已成功的情况（见 `notes/known_issues.md`）。
 2. **不周期性重规划**：`FOLLOWING` 中只有卡住检测，没有局部避障失败后重规划（等 obstacle layer）。
-3. **恢复不清图**：静态地图下无意义；动态层加入后必须补。
+3. **恢复只清激光障碍点**：进入 `RECOVERING` 会调用 `RollingCostmap::clear()`，但不清静态图（静态层本就无状态）。
 4. **单会话模型**：不支持目标队列；新目标抢占旧目标。
 5. **无任务层**：没有行为树/恢复行为编排/多点导航。
 6. **插件互斥**：`switchLocalPlanner()` 会 `reset` 掉 path tracker，`switchPathTracker()` 会 `reset` 掉 local planner（二选一）。
@@ -270,7 +271,16 @@ sequenceDiagram
 | `progress_epsilon` | double | 0.05 | m | 卡住判定的位移阈值 |
 | `tf_timeout_ticks` | int | 50 | 周期 | 连续 TF 失败多少周期判失败 |
 
-代价地图相关参数在 `map_adapter.*`（`occupied_threshold`、`robot_radius`、`inflation_radius`、`cost_scaling_factor`、`unknown_as_occupied`），由 `Nav2CostmapAdapter` 读取。
+**代价地图参数**（详见 `map_and_costmap.md`）：
+- `map_adapter.*`：全局静态层（`Nav2CostmapAdapter`）
+- `local_costmap.*`：局部滚动层（`RollingCostmap`，含 `window_size` / `obstacle_ttl` / `max_range` / `include_static` 等）
+
+**代价地图分层**：
+
+| 层 | 实现 | 给谁 |
+|---|---|---|
+| 全局（静态整图） | `Nav2CostmapAdapter` | 全局规划器插件 |
+| 局部（8m 滚动窗口 + 激光障碍） | `RollingCostmap` | 局部规划器插件 |
 
 ---
 
@@ -279,3 +289,4 @@ sequenceDiagram
 | 日期 | 变更 |
 |---|---|
 | 2026-10-23 | 初版：Action 接口、错误码、恢复行为、卡住检测、TF 超时（commit `4c0cad3`） |
+| 2026-10-23 | 代价地图拆成全局静态 + 局部滚动窗口（`RollingCostmap`），新增 `/obstacle_layer`、恢复清障碍点 |

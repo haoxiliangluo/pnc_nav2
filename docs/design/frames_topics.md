@@ -39,7 +39,7 @@ map ──(静态/AMCL)──▶ odom ──(gz DiffDrive, 50Hz)──▶ base_l
 | `/odom` | `nav_msgs/msg/Odometry` | GZ→ROS | 50Hz | DiffDrive + bridge | 位姿与速度（NavServer 只用 `twist`） |
 | `/tf` | `tf2_msgs/msg/TFMessage` | GZ→ROS | 50Hz | DiffDrive + bridge | `odom → base_link` |
 | `/joint_states` | `sensor_msgs/msg/JointState` | GZ→ROS | ~50Hz | bridge | 供 `robot_state_publisher` |
-| `/nav_scan` | `sensor_msgs/msg/LaserScan` | GZ→ROS | ~10Hz | 2D 车 `gpu_lidar` | **当前导航链路没用到**（只做可视化/后续障碍层） |
+| `/nav_scan` | `sensor_msgs/msg/LaserScan` | GZ→ROS | ~10Hz | 2D 车 `gpu_lidar` | 局部代价地图的障碍来源（**240° FOV**，见 KI-014） |
 | `/points` | `sensor_msgs/msg/PointCloud2` | GZ→ROS | — | 3D 车 `gpu_lidar`（`bridge_3d.yaml`） | 3D 激光点云 |
 
 ### 2.2 地图 / 导航（本项目核心）
@@ -47,7 +47,8 @@ map ──(静态/AMCL)──▶ odom ──(gz DiffDrive, 50Hz)──▶ base_l
 | 话题 | 类型 | 方向 | 频率 | 发布者 | 订阅者 |
 |---|---|---|---|---|---|
 | `/map` | `nav_msgs/msg/OccupancyGrid` | → | 一次 + 变化 | `nav2_map_server` | `Nav2CostmapAdapter` |
-| `/costmap` | `nav_msgs/msg/OccupancyGrid` | → | 2Hz（每 10 个控制周期） | `nav_server` | RViz（可视化膨胀结果） |
+| `/costmap` | `nav_msgs/msg/OccupancyGrid` | → | 2Hz（每 10 个控制周期） | `nav_server` | RViz（**8m 滚动窗口**：静态+激光+膨胀） |
+| `/obstacle_layer` | `nav_msgs/msg/OccupancyGrid` | → | 2Hz | `nav_server` | RViz（仅激光障碍，确认障碍层工作） |
 | `/global_plan` | `nav_msgs/msg/Path` | → | 每次规划成功 | `nav_server` | RViz / 评估脚本 |
 | `/local_plan` | `nav_msgs/msg/Path` | → | 跟随中 20Hz | `nav_server` | RViz |
 | `/cmd_vel` | `geometry_msgs/msg/Twist` | ROS→GZ | 跟随中 20Hz；退出时一帧零速 | `nav_server` | DiffDrive（经 bridge） |
@@ -128,3 +129,4 @@ Gazebo ──/tf──▶ TF(map→base_link) ──pose──▶ NavServer│
 | 日期 | 变更 |
 |---|---|
 | 2026-10-23 | 初版（commit `216e21d`） |
+| 2026-10-23 | `/costmap` 改为 8m 滚动窗口；新增 `/obstacle_layer`；`/nav_scan` 已接入障碍层 |

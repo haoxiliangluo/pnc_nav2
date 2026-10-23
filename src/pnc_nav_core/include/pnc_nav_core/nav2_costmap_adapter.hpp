@@ -19,6 +19,12 @@ public:
   double getResolution() const override;
   void getBounds(double &min_x, double &min_y, double &min_z, double &max_x, double &max_y, double &max_z) const override;
   std::string getFrameId() const override;
+  void clear() override {}
+
+  /// 底层 /map 栅格（可能为空）；滚动代价地图用它叠加静态障碍
+  const nav_msgs::msg::OccupancyGrid::SharedPtr & mapGrid() const {return current_map_;}
+  /// 判定障碍的占用阈值（0-100）
+  int occupiedThreshold() const {return occupied_threshold_;}
 
 private:
   void mapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);

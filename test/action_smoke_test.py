@@ -65,6 +65,10 @@ def main():
     else:
         x, y = 2.0, 0.0
 
+    # 可选：命令行覆盖目标点，例如 `feedback 4.0 0.0`
+    if len(sys.argv) >= 4:
+        x, y = float(sys.argv[2]), float(sys.argv[3])
+
     print(f'== send goal ({x}, {y}) mode={mode} ==', flush=True)
     send_future = node.client.send_goal_async(
         node.make_goal(x, y), feedback_callback=node.feedback_cb)

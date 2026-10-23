@@ -79,7 +79,7 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `progress_epsilon` | double | 0.05 | 0.05 | 卡住的位移阈值（m） |
 | `tf_timeout_ticks` | int | 50 | 50 | 连续多少个周期拿不到 TF 判失败（20Hz → 2.5s） |
 
-### 3.2 `map_adapter.*`（代价地图）
+### 3.2 `map_adapter.*`（全局静态代价地图）
 
 | 参数 | yaml 现值 | 说明 / 调参建议 |
 |---|---|---|
@@ -88,6 +88,24 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `inflation_radius` | 0.35 | 膨胀半径（m）。调大更保守，但窄通道可能无解 |
 | `cost_scaling_factor` | 3.0 | 代价衰减系数，越大衰减越快 |
 | `unknown_as_occupied` | true | 未知区域是否当障碍。真机建议 true，调试可 false |
+
+### 3.2b `local_costmap.*`（局部滚动代价地图）
+
+| 参数 | yaml 现值 | 说明 / 调参建议 |
+|---|---|---|
+| `enable` | true | 关掉后退化为"局部规划器直接用静态图"（旧行为） |
+| `scan_topic` | `nav_scan` | 2D 激光话题 |
+| `window_size` | 8.0 | 窗口边长（m），机器人居中 |
+| `resolution` | 0.05 | 窗口分辨率（m/cell） |
+| `obstacle_ttl` | 3.0 | 激光障碍点存活时间（s）；太短会闪、太长有残影 |
+| `max_range` | 6.0 | 只用这个范围内的激光（m） |
+| `inflation_radius` | 0.35 | 窗口内膨胀半径（m） |
+| `robot_radius` | 0.25 | 内切半径（m） |
+| `cost_scaling_factor` | 3.0 | 代价衰减系数 |
+| `include_static` | true | 是否把静态图障碍叠进窗口（激光能覆盖时影响很小） |
+| `unknown_as_occupied` | false | 窗口外是否当障碍 |
+
+调试：`python3 test/check_costmap_layers.py` 打印窗口尺寸/原点/占用格数；RViz 看 `/costmap` 与 `/obstacle_layer`。
 
 ### 3.3 `global_planner.*`（A* 系列）
 
@@ -128,8 +146,8 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `obstacle_cost_bias` | 0.02 | 0.3 | 避障权重 |
 | `heading_distance_bias` | 15.0 | 25.0 | 朝向对齐权重 |
 
-> ⚠️ DWA2D 目前有两处已知缺陷（到点停短、静态代价溢出），baseline 请用 `PurePursuit2D`，
-> 详见 `notes/known_issues.md`。
+> ⚠️ DWA2D 在引入局部滚动代价地图后已能正常到点（实测 10.06s / 1.86m），
+> 但"长路径或恢复后只转不走"的问题仍在（KI-013）。baseline 仍是 `PurePursuit2D`。
 
 ---
 
@@ -205,6 +223,8 @@ python3 test/action_smoke_test.py feedback|cancel|unreachable
 | 无界面跑 | `use_gui:=false use_rviz:=false` |
 | 看规划耗时/失败原因 | 看 `nav_server` 日志的 `Goal finished: ... error_code=...` |
 | 换地图 | 改 `map:=<绝对路径>/xxx.yaml`，注意 `.png/.pgm` 同目录 |
+| 确认障碍层在工作 | `python3 test/check_costmap_layers.py`；或 RViz 看 `/obstacle_layer` |
+| 动态障碍实验 | Gazebo 里 spawn 一个箱子：`ros2 run ros_gz_sim create -world world_demo -file /tmp/box.sdf -name box -x 3 -y 0 -z 0.4` |
 | 换机器人/传感器 | 见 `tutorials/04_maps_and_worlds.md`（🚧） |
 
 ---
@@ -247,3 +267,4 @@ colcon build --symlink-install --packages-select \
 | 日期 | 变更 |
 |---|---|
 | 2026-10-23 | 初版：启动矩阵、参数手册、插件切换、场景配方（commit `ed5280c`） |
+| 2026-10-23 | 新增 `local_costmap.*` 参数表、障碍层调试与动态障碍实验配方 |

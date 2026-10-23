@@ -56,7 +56,7 @@ ros2 action send_goal /navigate_to_3d_pose pnc_nav_interfaces/action/NavigateTo3
 |---|---|---|
 | [design/nav_server.md](design/nav_server.md) | 导航服务器怎么运转？action/feedback/result 语义？错误码？取消和抢占谁先谁后？ | ✅ |
 | [design/plugin_contract.md](design/plugin_contract.md) | 怎么写一个插件？调用顺序、线程模型、单位与坐标系约定？ | ✅ |
-| `design/map_and_costmap.md` | `CostmapInterface` 的边界语义？膨胀/未知怎么处理？ | 🚧 |
+| [design/map_and_costmap.md](design/map_and_costmap.md) | 双代价地图怎么分工？滚动窗口/障碍层/膨胀怎么工作？ | ✅ |
 | [design/frames_topics.md](design/frames_topics.md) | TF 树长什么样？有哪些话题、类型、方向、频率？ | ✅ |
 | [design/implementation_status.md](design/implementation_status.md) | 设计与代码的差距在哪？哪些是愿景？ | ✅ |
 | [tutorials/01_quickstart.md](tutorials/01_quickstart.md) | 怎么在 30 分钟内跑通并发出第一个目标？ | ✅ |

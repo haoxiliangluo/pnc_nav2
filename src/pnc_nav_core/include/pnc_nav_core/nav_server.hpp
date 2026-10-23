@@ -30,6 +30,9 @@
 namespace pnc_nav_core
 {
 
+class Nav2CostmapAdapter;
+class RollingCostmap;
+
 /**
  * @enum NavState
  * @brief 导航状态机
@@ -126,7 +129,9 @@ private:
   uint16_t tf_fail_count_{0};  // 连续 TF 失败次数
 
   // --- 代价地图 ---
-  CostmapInterface::SharedPtr costmap_;
+  std::shared_ptr<Nav2CostmapAdapter> static_costmap_;// 全局：静态 /map（给全局规划器）
+  std::shared_ptr<RollingCostmap> local_costmap_;// 局部：滚动窗口 + 障碍层（给局部规划器）
+  void updateLocalCostmap();// 每周期：滚动窗口 + 激光障碍更新
 
   // --- 控制循环 ---
   rclcpp::TimerBase::SharedPtr control_timer_;
@@ -137,6 +142,7 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr local_plan_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_pub_;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr obstacle_pub_;
   uint32_t costmap_frame_count_{0};
   void publishCostmap();
   void stopRobot();// 发布零速，保证任何退出路径都先停车

@@ -12,7 +12,7 @@
 |---|---|---|---|
 | `GlobalPlannerBase` | 起点 → 目标，输出全局路径 | ✅ | ✅ `global_planner_plugin` |
 | `PathTrackerBase` | 跟踪给定路径，输出 `cmd_vel`（**不避障**） | ❌ | ✅ `path_tracker_plugin` |
-| `LocalPlannerBase` | 结合代价地图输出 `cmd_vel`（**带避障**） | ✅ | ✅ `local_planner_plugin`（与 tracker 二选一） |
+| `LocalPlannerBase` | 结合代价地图输出 `cmd_vel`（**带避障**） | ✅（拿到的是**局部滚动窗口**） | ✅ `local_planner_plugin`（与 tracker 二选一） |
 | `LocomotionControllerBase` | `cmd_vel` → 关节指令（四足步态） | ❌ | ❌ 未接入（为 3D/Go2 预留） |
 
 > `local_planner` 与 `path_tracker` 互斥：两者都配置时**优先 local_planner**（`loadPlugins()` 提前 return）。

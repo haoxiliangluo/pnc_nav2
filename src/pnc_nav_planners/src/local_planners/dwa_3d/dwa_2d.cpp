@@ -131,16 +131,16 @@ bool DWA2D::setPath(const nav_msgs::msg::Path & path)
         dtheta = std::atan2(std::sin(dtheta),std::cos(dtheta));
         if(distance<=dist_tolerance)
         {
-            RCLCPP_INFO(node_->get_logger(),"与目标距离差达到");
+            RCLCPP_DEBUG(node_->get_logger(), "与目标距离差达到");
             if(std::abs(dtheta) <= angle_tolerance)
             {
-                RCLCPP_INFO(node_->get_logger(),"与目标角度差达到");
+                RCLCPP_DEBUG(node_->get_logger(), "与目标角度差达到");
                 return true;
             }
-            RCLCPP_INFO(node_->get_logger(),"与目标角度差未达到");
+            RCLCPP_DEBUG(node_->get_logger(), "与目标角度差未达到");
             return false;
         }
-        RCLCPP_INFO(node_->get_logger(),"与目标距离差未达到");
+        RCLCPP_DEBUG(node_->get_logger(), "与目标距离差未达到");
         return false;
     }
 
@@ -371,11 +371,14 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
         node_->get_logger(), *node_->get_clock(), 1000,
         "DWA2D: no valid trajectory found, publishing zero velocity");
     } else {
+      // static_cost 的初值是 double::max（表示"本次没有采样到静止轨迹"），不是代价溢出
+      const double static_cost_dbg =
+        (static_cost == std::numeric_limits<double>::max()) ? -1.0 : static_cost;
       RCLCPP_INFO_THROTTLE(
         node_->get_logger(), *node_->get_clock(), 2000,
         "DWA2D: cmd=(%.4f, %.4f) best=%.3f static=%.3f motion=%.3f(vx=%.2f,vz=%.2f)",
         best_cmd.twist.linear.x, best_cmd.twist.angular.z, best_cost,
-        static_cost, min_motion_cost, min_motion_vx, min_motion_vz);
+        static_cost_dbg, min_motion_cost, min_motion_vx, min_motion_vz);
     }
 
     return best_cmd;
