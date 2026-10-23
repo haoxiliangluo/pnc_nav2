@@ -49,6 +49,7 @@ colcon build --symlink-install --parallel-workers 4 \
 > 为什么不 `colcon build` 全量：`third_party/cartographer` 需要 `abseil/protobuf/ceres`，
 > 默认环境没有；`pnc_nav_rviz`（RViz 控制面板）依赖 `cartographer_ros_msgs`。
 > 本教程不需要它们。确实要编 RViz 面板时见 `guides/runbook.md`。
+> 做教程 02（写插件）时需要再构建示例包：`--packages-select pnc_nav_core pnc_nav_examples`。
 
 ---
 

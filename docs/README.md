@@ -32,7 +32,7 @@ ros2 action send_goal /navigate_to_3d_pose pnc_nav_interfaces/action/NavigateTo3
 按顺序读，每篇都有"检查点"和可复制命令：
 
 1. [tutorials/01_quickstart.md](tutorials/01_quickstart.md) —— 30 分钟跑起来，发第一个目标
-2. `tutorials/02_first_plugin.md` —— 写第一个规划器插件（🚧 计划中）
+2. [tutorials/02_first_plugin.md](tutorials/02_first_plugin.md) —— 写第一个规划器插件并热插拔 ✅
 3. `tutorials/03_how_a_cycle_runs.md` —— 走读一次控制循环（🚧 计划中）
 4. `tutorials/04_maps_and_worlds.md` —— 换地图 / 改世界 / 加传感器（🚧 计划中）
 5. `tutorials/05_evaluate.md` —— 用评估脚本做算法对比（🚧 计划中）
@@ -45,7 +45,7 @@ ros2 action send_goal /navigate_to_3d_pose pnc_nav_interfaces/action/NavigateTo3
 1. [design/nav_server.md](design/nav_server.md) —— 状态机、action 契约、错误码、取消/抢占时序 ✅
 2. `notes/vs_nav2.md` —— 与官方 Nav2 的逐项对照与取舍（🚧 计划中）
 3. `notes/decisions.md` —— 关键决策记录 ADR（🚧 计划中）
-4. `design/plugin_contract.md` —— 插件契约（线程模型 / 调用顺序 / 参数命名约定）（🚧 计划中）
+4. [design/plugin_contract.md](design/plugin_contract.md) —— 插件契约（线程模型 / 调用顺序 / 参数命名约定）✅
 5. `design/implementation_status.md` —— 设计 vs 现状矩阵（🚧 计划中）
 
 ---
@@ -55,12 +55,13 @@ ros2 action send_goal /navigate_to_3d_pose pnc_nav_interfaces/action/NavigateTo3
 | 文档 | 回答什么问题 | 状态 |
 |---|---|---|
 | [design/nav_server.md](design/nav_server.md) | 导航服务器怎么运转？action/feedback/result 语义？错误码？取消和抢占谁先谁后？ | ✅ |
-| `design/plugin_contract.md` | 怎么写一个插件？调用顺序、线程模型、单位与坐标系约定？ | 🚧 |
+| [design/plugin_contract.md](design/plugin_contract.md) | 怎么写一个插件？调用顺序、线程模型、单位与坐标系约定？ | ✅ |
 | `design/map_and_costmap.md` | `CostmapInterface` 的边界语义？膨胀/未知怎么处理？ | 🚧 |
 | `design/frames_topics.md` | TF 树长什么样？有哪些话题、类型、方向、频率？ | 🚧 |
 | `design/implementation_status.md` | 设计与代码的差距在哪？哪些是愿景？ | 🚧 |
 | [tutorials/01_quickstart.md](tutorials/01_quickstart.md) | 怎么在 30 分钟内跑通并发出第一个目标？ | ✅ |
-| [guides/runbook.md](guides/runbook.md) | 启动矩阵、参数手册、调参建议 | 🚧 |
+| [tutorials/02_first_plugin.md](tutorials/02_first_plugin.md) | 怎么写第一个规划器插件、怎么热插拔？ | ✅ |
+| [guides/runbook.md](guides/runbook.md) | 启动矩阵、参数手册、调参建议 | ✅ |
 | [guides/sim_setup.md](guides/sim_setup.md) | 仿真栈怎么搭？`ROS_DOMAIN_ID`/`GZ_PARTITION` 为什么重要？ | 🚧 |
 | `notes/vs_nav2.md` | 和 Nav2 的取舍对照（面试高频） | 🚧 |
 | `notes/decisions.md` | 每个关键决策的理由与代价 | 🚧 |
