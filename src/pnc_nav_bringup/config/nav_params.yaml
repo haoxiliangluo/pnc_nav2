@@ -21,8 +21,9 @@ nav_server:
 
     # --- 插件选择 ---
     global_planner_plugin: "pnc_nav_planners::AStar2D"
-    local_planner_plugin: "pnc_nav_planners::DWA2D"         # baseline 默认走 path_tracker；测试 DWA 时改为 "pnc_nav_planners::DWA2D"
-    #path_tracker_plugin: "pnc_nav_planners::PurePursuit2D"
+    # baseline：AStar2D + PurePursuit2D（已验证能到达目标）
+    local_planner_plugin: ""                                # 非空则优先用局部规划器；测 DWA 时填 "pnc_nav_planners::DWA2D"
+    path_tracker_plugin: "pnc_nav_planners::PurePursuit2D"
 
     # # --- Phase 1: 简单 2D costmap ---
     # costmap:
