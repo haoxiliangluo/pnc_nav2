@@ -182,6 +182,9 @@ private:
   /// 进入恢复行为（计数 +1，记录开始时间）；重试耗尽时直接结束会话并返回 false
   bool enterRecovery(const std::string & reason);
 
+  /// 恢复旋转前的安全检查：以机器人为心、recovery_safety_radius 为半径采样一圈，有障碍就不许转
+  bool isRotationSafe(const geometry_msgs::msg::PoseStamped & pose) const;
+
   // --- 会话状态 ---
   geometry_msgs::msg::PoseStamped current_goal_;
   nav_msgs::msg::Path current_global_path_;
@@ -219,6 +222,8 @@ private:
   double progress_timeout_{8.0};// 卡住判定：多久没有位移算卡住 (s)，<=0 关闭
   double progress_epsilon_{0.05};// 卡住判定：位移阈值 (m)
   int tf_timeout_ticks_{50};// 连续 TF 失败多少周期后判失败
+  bool recovery_collision_check_{true};// 恢复旋转前是否做碰撞检查
+  double recovery_safety_radius_{0.35};// 旋转安全检查半径 (m)，应 >= robot_radius
 };
 
 }  // namespace pnc_nav_core

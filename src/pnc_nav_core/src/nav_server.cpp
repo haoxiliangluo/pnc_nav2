@@ -98,6 +98,8 @@ NavServer::NavServer(const rclcpp::NodeOptions & options)
   declare_parameter("progress_timeout", 8.0);
   declare_parameter("progress_epsilon", 0.05);
   declare_parameter("tf_timeout_ticks", 50);
+  declare_parameter("recovery_collision_check", true);
+  declare_parameter("recovery_safety_radius", 0.35);
 
   // 获取参数
   control_frequency_ = get_parameter("control_frequency").as_double();
@@ -113,6 +115,8 @@ NavServer::NavServer(const rclcpp::NodeOptions & options)
   progress_timeout_ = get_parameter("progress_timeout").as_double();
   progress_epsilon_ = get_parameter("progress_epsilon").as_double();
   tf_timeout_ticks_ = get_parameter("tf_timeout_ticks").as_int();
+  recovery_collision_check_ = get_parameter("recovery_collision_check").as_bool();
+  recovery_safety_radius_ = get_parameter("recovery_safety_radius").as_double();
 
   RCLCPP_INFO(get_logger(), "NavServer created");
 }
@@ -461,6 +465,36 @@ bool NavServer::enterRecovery(const std::string & reason)
   return true;
 }
 
+bool NavServer::isRotationSafe(const geometry_msgs::msg::PoseStamped & pose) const
+{
+  CostmapInterface::SharedPtr costmap;
+  if (local_costmap_ && local_costmap_->enabled()) {
+    costmap = local_costmap_;
+  } else {
+    costmap = static_costmap_;
+  }
+  if (!costmap) {
+    return true;  // 没有代价地图时保持旧行为（不做额外限制）
+  }
+
+  const double x = pose.pose.position.x;
+  const double y = pose.pose.position.y;
+  if (costmap->isOccupied(x, y, 0.0)) {
+    return false;
+  }
+
+  constexpr int kSamples = 16;
+  for (int i = 0; i < kSamples; ++i) {
+    const double a = 2.0 * M_PI * static_cast<double>(i) / kSamples;
+    const double sx = x + recovery_safety_radius_ * std::cos(a);
+    const double sy = y + recovery_safety_radius_ * std::sin(a);
+    if (costmap->isOccupied(sx, sy, 0.0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void NavServer::stopRobot()
 {
   if (cmd_vel_pub_) {
@@ -707,7 +741,27 @@ void NavServer::controlLoop()
     case NavState::RECOVERING:
     {
       // 最小恢复动作：原地旋转，换个视角/脱离卡死姿态，然后重新规划。
-      // 注：动态障碍层（obstacle layer）加入后，这里应先清局部代价地图再旋转。
+      // 安全前提：旋转前/旋转中都要确认"以机器人为心、safety_radius 为半径"的一圈里没有障碍，
+      // 否则贴着墙转可能把车体蹭上去（KI-012）。
+      geometry_msgs::msg::PoseStamped current_pose;
+      const bool have_pose = getCurrentPose(current_pose);
+      const bool spin_allowed =
+        !recovery_collision_check_ || (have_pose && isRotationSafe(current_pose));
+
+      if (!spin_allowed) {
+        if (!have_pose) {
+          RCLCPP_WARN(get_logger(), "Recovery rotation skipped: no robot pose (TF?)");
+        } else {
+          RCLCPP_WARN(
+            get_logger(),
+            "Recovery rotation blocked (obstacle within %.2f m), skip spin and replan",
+            recovery_safety_radius_);
+        }
+        plan_start_time_ = std::chrono::steady_clock::now();
+        transitionTo(NavState::PLANNING);
+        break;
+      }
+
       if (secondsSince(recovery_start_time_) < recovery_spin_duration_) {
         geometry_msgs::msg::Twist spin;
         spin.angular.z = recovery_angular_vel_;

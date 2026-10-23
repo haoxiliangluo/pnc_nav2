@@ -78,6 +78,8 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `progress_timeout` | double | 8.0 | 8.0 | 多久没位移判卡住（s）；`<=0` 关闭 |
 | `progress_epsilon` | double | 0.05 | 0.05 | 卡住的位移阈值（m） |
 | `tf_timeout_ticks` | int | 50 | 50 | 连续多少个周期拿不到 TF 判失败（20Hz → 2.5s） |
+| `recovery_collision_check` | bool | true | true | 恢复旋转前做碰撞检查（KI-012） |
+| `recovery_safety_radius` | double | 0.35 | 0.35 | 安全检查半径（m），建议 ≥ 车体半径 + 0.1 |
 
 ### 3.2 `map_adapter.*`（全局静态代价地图）
 

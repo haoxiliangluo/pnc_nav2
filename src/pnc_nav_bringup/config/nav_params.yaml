@@ -18,6 +18,8 @@ nav_server:
     progress_timeout: 8.0          # 多久无位移判卡住 (s)，<=0 关闭
     progress_epsilon: 0.05         # 卡住判定的位移阈值 (m)
     tf_timeout_ticks: 50           # 连续多少次拿不到 TF 判失败
+    recovery_collision_check: true  # 恢复旋转前做碰撞检查
+    recovery_safety_radius: 0.35    # 旋转安全检查半径 (m)，应 >= robot_radius
 
     # --- 插件选择 ---
     global_planner_plugin: "pnc_nav_planners::AStar2D"

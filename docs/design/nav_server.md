@@ -170,6 +170,7 @@ stateDiagram-v2
 | 项 | 值 / 说明 |
 |---|---|
 | 触发条件 | ① 全局规划无解；② `progress_timeout`（默认 8s）内位移小于 `progress_epsilon`（默认 0.05m） |
+| 安全前提 | 旋转前/旋转中做碰撞检查：以机器人为心、`recovery_safety_radius`（默认 0.35m）为半径采样 16 点，任一被占则不旋转，直接回 `PLANNING`（计数器照常 +1，最终以 `error_code=3` 结束） |
 | 动作 | 原地旋转 `recovery_spin_duration`（默认 1s，`recovery_angular_vel` 0.6 rad/s）后重新规划 |
 | 重试上限 | `max_planning_retries`（默认 3）：进入恢复 3 次后仍在失败 → `error_code=3`（MAX_RETRIES） |
 | 计数用途 | `number_of_recoveries` feedback 字段；日志 `Entering recovery (...) attempt N/3` |
@@ -247,7 +248,7 @@ sequenceDiagram
 5. **无任务层**：没有行为树/恢复行为编排/多点导航。
 6. **插件互斥**：`switchLocalPlanner()` 会 `reset` 掉 path tracker，`switchPathTracker()` 会 `reset` 掉 local planner（二选一）。
 7. **无 lifecycle**：非 `rclcpp_lifecycle` 节点；插件的 `activate/deactivate` 只是可选钩子。
-8. **原地旋转恢复不检查碰撞**：没有 costmap 检查，实机上需要先加安全判断。
+8. **旋转安全检查的盲区**：安全检查用的是局部滚动代价地图，而滚动图把"未知区域"当空闲（`unknown_as_occupied=false`），所以**雷达没看到过的障碍不会被判危险**；真机部署时把 `recovery_safety_radius` 调保守（≥ 车体半径 + 余量）。
 
 ---
 
@@ -270,6 +271,8 @@ sequenceDiagram
 | `progress_timeout` | double | 8.0 | s | 无位移多久判卡住（<=0 关闭） |
 | `progress_epsilon` | double | 0.05 | m | 卡住判定的位移阈值 |
 | `tf_timeout_ticks` | int | 50 | 周期 | 连续 TF 失败多少周期判失败 |
+| `recovery_collision_check` | bool | true | — | 恢复旋转前是否做碰撞检查 |
+| `recovery_safety_radius` | double | 0.35 | m | 安全检查半径：以机器人为心采样一圈，有障碍就不旋转 |
 
 **代价地图参数**（详见 `map_and_costmap.md`）：
 - `map_adapter.*`：全局静态层（`Nav2CostmapAdapter`）
@@ -290,3 +293,4 @@ sequenceDiagram
 |---|---|
 | 2026-10-23 | 初版：Action 接口、错误码、恢复行为、卡住检测、TF 超时（commit `4c0cad3`） |
 | 2026-10-23 | 代价地图拆成全局静态 + 局部滚动窗口（`RollingCostmap`），新增 `/obstacle_layer`、恢复清障碍点 |
+| 2026-10-23 | 恢复旋转增加碰撞检查（`recovery_collision_check` / `recovery_safety_radius`） |
