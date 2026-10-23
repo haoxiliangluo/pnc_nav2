@@ -78,6 +78,13 @@ private:
     const geometry_msgs::msg::PoseStamped & current_pose,
     double vx, double vy, double vtheta) const;
 
+  // 路径投影/前视（朝向代价与"剩余路径长度"代价用）
+  void rebuildPathSamples();
+  bool projectOnPath(
+    double x, double y, double & s, double & lateral,
+    double & dir_x, double & dir_y) const;
+  bool pointAtArcLength(double s, geometry_msgs::msg::Point & out) const;
+
   // 代价函数
   double pathDistanceCost(const Trajectory & traj) const;
   double goalDistanceCost(const Trajectory & traj) const;
@@ -92,6 +99,10 @@ private:
   // 当前全局路径和目标
   nav_msgs::msg::Path global_path_;
   geometry_msgs::msg::PoseStamped current_goal_;
+  // 路径弧长采样（投影用）
+  std::vector<double> path_s_;
+  double path_length_{0.0};
+  double lookahead_{0.6};// 朝向代价的前视距离 (m)
 
   // 最优轨迹（用于可视化）
   Trajectory best_trajectory_;

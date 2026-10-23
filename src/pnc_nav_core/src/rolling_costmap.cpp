@@ -77,23 +77,19 @@ void RollingCostmap::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr m
     return;
   }
 
+  // 只用"最新可用"变换（tf2::TimePointZero）：
+  // 不要用 lookupTransform(..., stamp, rclcpp::Duration) 这种带超时的版本——
+  // 仿真刚启动时 /clock 可能还是 0，超时计时基于 ROS 时间会永远等不到，把单线程执行器卡死。
   geometry_msgs::msg::TransformStamped tf;
   try {
-    // 优先用扫描时刻的 TF；仿真里偶发 TF 未就绪，退回最新可用变换
     tf = tf_buffer_->lookupTransform(
-      frame_id_, msg->header.frame_id, msg->header.stamp,
-      rclcpp::Duration::from_seconds(0.05));
-  } catch (const tf2::TransformException &) {
-    try {
-      tf = tf_buffer_->lookupTransform(
-        frame_id_, msg->header.frame_id, tf2::TimePointZero);
-    } catch (const tf2::TransformException & ex) {
-      RCLCPP_WARN_THROTTLE(
-        node_->get_logger(), *node_->get_clock(), 2000,
-        "RollingCostmap: cannot transform %s -> %s: %s",
-        msg->header.frame_id.c_str(), frame_id_.c_str(), ex.what());
-      return;
-    }
+      frame_id_, msg->header.frame_id, tf2::TimePointZero);
+  } catch (const tf2::TransformException & ex) {
+    RCLCPP_WARN_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 2000,
+      "RollingCostmap: cannot transform %s -> %s: %s",
+      msg->header.frame_id.c_str(), frame_id_.c_str(), ex.what());
+    return;
   }
 
   const double tx = tf.transform.translation.x;

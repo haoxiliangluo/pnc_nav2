@@ -107,6 +107,7 @@ bool DWA2D::setPath(const nav_msgs::msg::Path & path)
   global_path_ = path;
   current_goal_ = path.poses.back();
   best_trajectory_.poses.clear();
+  rebuildPathSamples();
   return true;
 }
 
@@ -230,30 +231,126 @@ double DWA2D::computeCost(const Trajectory & traj) const
   return total_cost;
 }
 
+void DWA2D::rebuildPathSamples()
+{
+  path_s_.assign(global_path_.poses.size(), 0.0);
+  path_length_ = 0.0;
+  for (size_t i = 1; i < global_path_.poses.size(); ++i) {
+    const auto & a = global_path_.poses[i - 1].pose.position;
+    const auto & b = global_path_.poses[i].pose.position;
+    path_length_ += std::hypot(b.x - a.x, b.y - a.y);
+    path_s_[i] = path_length_;
+  }
+}
+
+bool DWA2D::projectOnPath(
+  double x, double y, double & s, double & lateral,
+  double & dir_x, double & dir_y) const
+{
+  if (global_path_.poses.empty()) {
+    return false;
+  }
+  if (global_path_.poses.size() == 1) {
+    const auto & p = global_path_.poses.front().pose.position;
+    lateral = std::hypot(x - p.x, y - p.y);
+    s = 0.0;
+    dir_x = 1.0;
+    dir_y = 0.0;
+    return true;
+  }
+
+  double best = std::numeric_limits<double>::max();
+  bool found = false;
+  for (size_t i = 0; i + 1 < global_path_.poses.size(); ++i) {
+    const auto & a = global_path_.poses[i].pose.position;
+    const auto & b = global_path_.poses[i + 1].pose.position;
+    const double vx = b.x - a.x;
+    const double vy = b.y - a.y;
+    const double len = std::hypot(vx, vy);
+    if (len < 1e-6) {
+      continue;
+    }
+    const double t = std::clamp(((x - a.x) * vx + (y - a.y) * vy) / (len * len), 0.0, 1.0);
+    const double px = a.x + t * vx;
+    const double py = a.y + t * vy;
+    const double d = std::hypot(x - px, y - py);
+    if (d < best) {
+      best = d;
+      lateral = d;
+      s = path_s_[i] + t * len;
+      dir_x = vx / len;
+      dir_y = vy / len;
+      found = true;
+    }
+  }
+  return found;
+}
+
+bool DWA2D::pointAtArcLength(double s, geometry_msgs::msg::Point & out) const
+{
+  if (global_path_.poses.empty()) {
+    return false;
+  }
+  if (global_path_.poses.size() == 1) {
+    out = global_path_.poses.front().pose.position;
+    return true;
+  }
+  const double target = std::clamp(s, 0.0, path_length_);
+  for (size_t i = 0; i + 1 < global_path_.poses.size(); ++i) {
+    if (path_s_[i + 1] >= target) {
+      const auto & a = global_path_.poses[i].pose.position;
+      const auto & b = global_path_.poses[i + 1].pose.position;
+      const double seg_len = path_s_[i + 1] - path_s_[i];
+      const double t = seg_len > 1e-6 ? (target - path_s_[i]) / seg_len : 0.0;
+      out.x = a.x + t * (b.x - a.x);
+      out.y = a.y + t * (b.y - a.y);
+      out.z = 0.0;
+      return true;
+    }
+  }
+  out = global_path_.poses.back().pose.position;
+  return true;
+}
+
 double DWA2D::pathDistanceCost(const Trajectory & traj) const
 {
   if (traj.poses.empty() || global_path_.poses.empty()) {
     return std::numeric_limits<double>::max();
   }
 
-  double min_cost = std::numeric_limits<double>::max();
-  const auto & endpoint = traj.poses.back();
-
-  for (const auto & path_pose : global_path_.poses) {
-      double dx = endpoint.pose.position.x - path_pose.pose.position.x;
-      double dy = endpoint.pose.position.y - path_pose.pose.position.y;
-      double cost = std::hypot(dx,dy);
-      min_cost = std::min(min_cost,cost);
+  const auto & endpoint = traj.poses.back().pose.position;
+  double s = 0.0;
+  double lateral = 0.0;
+  double dx = 1.0;
+  double dy = 0.0;
+  if (!projectOnPath(endpoint.x, endpoint.y, s, lateral, dx, dy)) {
+    return std::numeric_limits<double>::max();
   }
-  return min_cost;
+  // 关键修复（KI-013）：代价用"到路径折线的横向偏差"，而不是"到最近离散路径点的距离"。
+  // 量到离散点时，轨迹终点落在两点之间会凭空多出最多半个点距的代价，
+  // 乘上 path_distance_bias 后足以让"原地不动"比"沿路径前进"更划算。
+  return lateral;
 }
   double DWA2D::goalDistanceCost(const Trajectory & traj) const
   {
     if(traj.poses.empty())return std::numeric_limits<double>::max();
-    double dx = traj.poses.back().pose.position.x - current_goal_.pose.position.x;
-    double dy = traj.poses.back().pose.position.y - current_goal_.pose.position.y;
-    double distans = std::hypot(dx,dy);
-    return distans;
+    const auto & e = traj.poses.back().pose.position;
+
+    // 有路径时用"沿路径的剩余里程"，这样沿路径前进一定单调下降；
+    // 直接用"到目标的直线距离"会在路径绕行时和 path_cost 打架（KI-013）。
+    double s = 0.0;
+    double lateral = 0.0;
+    double dx_dir = 1.0;
+    double dy_dir = 0.0;
+    if (path_length_ > 1e-6 &&
+      projectOnPath(e.x, e.y, s, lateral, dx_dir, dy_dir))
+    {
+      return std::max(0.0, path_length_ - s);
+    }
+
+    double dx = e.x - current_goal_.pose.position.x;
+    double dy = e.y - current_goal_.pose.position.y;
+    return std::hypot(dx,dy);
   }
   double DWA2D::obstacleCost(const Trajectory & traj) const
   { double max_cost = 0.0;
@@ -283,10 +380,28 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
       return std::numeric_limits<double>::max();
     }
     const auto & end = traj.poses.back().pose.position;
+    const double traj_yaw = tf2::getYaw(traj.poses.back().pose.orientation);
+
+    // 朝向代价跟"路径前视点"，而不是"目标点"：
+    // 全局路径绕障时，朝目标点会与路径方向打架（KI-013 的另一半）。
+    double s = 0.0;
+    double lateral = 0.0;
+    double dx_dir = 1.0;
+    double dy_dir = 0.0;
+    geometry_msgs::msg::Point ahead;
+    if (path_length_ > 1e-6 &&
+      projectOnPath(end.x, end.y, s, lateral, dx_dir, dy_dir) &&
+      pointAtArcLength(s + lookahead_, ahead))
+    {
+      const double desired = std::atan2(ahead.y - end.y, ahead.x - end.x);
+      const double dyaw = desired - traj_yaw;
+      return std::abs(std::atan2(std::sin(dyaw), std::cos(dyaw)));
+    }
+
+    // 退化：没有路径时按目标方向
     double dx = current_goal_.pose.position.x - end.x;
     double dy = current_goal_.pose.position.y - end.y;
-    double dist = std::hypot(dx, dy);
-    double traj_yaw = tf2::getYaw(traj.poses.back().pose.orientation);
+    const double dist = std::hypot(dx, dy);
     if (dist < 0.3) {
       double goal_yaw = tf2::getYaw(current_goal_.pose.orientation);
       double dyaw = goal_yaw - traj_yaw;
@@ -316,6 +431,11 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
                  current_goal_.pose.position.y - current_pose.pose.position.y));
 
     double best_cost = std::numeric_limits<double>::max();
+    // 诊断：分别记录"停车/原地转"与"前进"两类候选的最优代价（排查只转不走用）
+    double best_stop_cost = std::numeric_limits<double>::max();
+    double best_move_cost = std::numeric_limits<double>::max();
+    // 最优候选的分项代价（用于诊断）
+    double best_path_c = 0.0, best_goal_c = 0.0, best_obs_c = 0.0, best_head_c = 0.0;
     bool found_valid_trajectory = false;
     double min_motion_cost = std::numeric_limits<double>::max();
     double min_motion_vx = 0.0, min_motion_vz = 0.0;
@@ -334,6 +454,11 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
           double vtheta = sampleValue(min_vtheta, max_vtheta, vtheta_samples_, k);
           auto traj = simulateTrajectory(current_pose,vx,vy,vtheta);
           double total_cost = computeCost(traj);
+          if (vx == 0.0) {
+            best_stop_cost = std::min(best_stop_cost, total_cost);
+          } else {
+            best_move_cost = std::min(best_move_cost, total_cost);
+          }
           // 调试：独立统计运动/静止轨迹 cost
           if (vx == 0.0 && vtheta == 0.0) {
             static_cost = total_cost;
@@ -344,6 +469,10 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
           }
           if(total_cost < best_cost)
           {
+            best_path_c = debug_last_path_cost_;
+            best_goal_c = debug_last_goal_cost_;
+            best_obs_c = debug_last_obstacle_cost_;
+            best_head_c = debug_last_heading_cost_;
             found_valid_trajectory = true;
             best_cost = total_cost;
             best_cmd.twist.linear.x = vx;
@@ -371,14 +500,21 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
         node_->get_logger(), *node_->get_clock(), 1000,
         "DWA2D: no valid trajectory found, publishing zero velocity");
     } else {
-      // static_cost 的初值是 double::max（表示"本次没有采样到静止轨迹"），不是代价溢出
-      const double static_cost_dbg =
-        (static_cost == std::numeric_limits<double>::max()) ? -1.0 : static_cost;
+      // stop/move 的初值是 double::max（表示"本轮没采到该类候选"），打印成 -1 避免误读
+      const auto as_dbg = [](double v) {
+        return (v == std::numeric_limits<double>::max()) ? -1.0 : v;
+      };
+      const double static_cost_dbg = as_dbg(static_cost);
+      const double stop_cost_dbg = as_dbg(best_stop_cost);
+      const double move_cost_dbg = as_dbg(best_move_cost);
       RCLCPP_INFO_THROTTLE(
-        node_->get_logger(), *node_->get_clock(), 2000,
-        "DWA2D: cmd=(%.4f, %.4f) best=%.3f static=%.3f motion=%.3f(vx=%.2f,vz=%.2f)",
+        node_->get_logger(), *node_->get_clock(), 5000,
+        "DWA2D: cmd=(%.4f, %.4f) best=%.3f stop=%.3f move=%.3f "
+        "path=%.2f goal=%.2f obs=%.1f head=%.2f yaw=%.2f",
         best_cmd.twist.linear.x, best_cmd.twist.angular.z, best_cost,
-        static_cost_dbg, min_motion_cost, min_motion_vx, min_motion_vz);
+        stop_cost_dbg, move_cost_dbg,
+        best_path_c, best_goal_c, best_obs_c, best_head_c,
+        tf2::getYaw(current_pose.pose.orientation));
     }
 
     return best_cmd;

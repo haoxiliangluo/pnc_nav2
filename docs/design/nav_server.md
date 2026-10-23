@@ -279,7 +279,7 @@ sequenceDiagram
 
 | 层 | 实现 | 给谁 |
 |---|---|---|
-| 全局（静态整图） | `Nav2CostmapAdapter` | 全局规划器插件 |
+| 全局（静态整图 + 窗口障碍叠加） | `OverlayCostmap(Nav2CostmapAdapter, RollingCostmap)` | 全局规划器插件 |
 | 局部（8m 滚动窗口 + 激光障碍） | `RollingCostmap` | 局部规划器插件 |
 
 ---

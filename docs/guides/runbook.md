@@ -141,13 +141,14 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `sim_time` | 1.2 | 1.0 | 前向仿真时长（s） |
 | `vx_samples` / `vtheta_samples` | 8 / 15 | 12 / 21 | 采样数；越大越慢越稳 |
 | `dt` | 0.1 | 0.1 | 仿真步长（s） |
-| `path_distance_bias` | 32.0 | 32.0 | 贴路径权重 |
-| `goal_distance_bias` | 24.0 | 12.0 | 冲目标权重 |
+| `path_distance_bias` | 32.0 | 16.0 | 横向偏离路径权重（改用折线投影后可调小） |
+| `goal_distance_bias` | 24.0 | 20.0 | 沿路径剩余里程权重（驱动前进） |
 | `obstacle_cost_bias` | 0.02 | 0.3 | 避障权重 |
 | `heading_distance_bias` | 15.0 | 25.0 | 朝向对齐权重 |
 
-> ⚠️ DWA2D 在引入局部滚动代价地图后已能正常到点（实测 10.06s / 1.86m），
-> 但"长路径或恢复后只转不走"的问题仍在（KI-013）。baseline 仍是 `PurePursuit2D`。
+> ✅ DWA2D 已修复"只转不走"（KI-013）：路径代价改折线投影、目标代价改剩余弧长、朝向改前视切线。
+> 实测 2/4/5/6m 目标均成功，且能在 0.4m 箱子挡路时绕行（44.4s / 4.21m）。
+> baseline 仍默认 `PurePursuit2D`（更快），需要避障时切 DWA2D。
 
 ---
 

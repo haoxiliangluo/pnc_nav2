@@ -11,6 +11,7 @@
 
 #include "pnc_nav_core/nav2_costmap_adapter.hpp"
 #include "pnc_nav_core/rolling_costmap.hpp"
+#include "pnc_nav_core/overlay_costmap.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace pnc_nav_core
@@ -135,6 +136,9 @@ void NavServer::initialize()
   static_costmap_ = std::make_shared<Nav2CostmapAdapter>(shared_from_this());
   local_costmap_ = std::make_shared<RollingCostmap>(
     shared_from_this(), tf_buffer_, static_costmap_);
+  // 全局规划器也用"窗口叠加"视图：A* 能看到窗口内的动态障碍（重规划可绕行），
+  // 但搜索范围仍是整张静态地图。
+  global_costmap_ = std::make_shared<OverlayCostmap>(static_costmap_, local_costmap_);
 
   // 发布者
   global_plan_pub_ = create_publisher<nav_msgs::msg::Path>("global_plan", 10);
@@ -188,7 +192,7 @@ void NavServer::loadPlugins()
 
   try {
     global_planner_ = global_planner_loader_.createSharedInstance(global_plugin_name);
-    global_planner_->configure(shared_from_this(), "global_planner", static_costmap_);
+    global_planner_->configure(shared_from_this(), "global_planner", global_costmap_);
     global_planner_->activate();
     current_global_plugin_ = global_plugin_name;
     RCLCPP_INFO(get_logger(), "Loaded global planner: %s", global_plugin_name.c_str());
@@ -235,7 +239,7 @@ bool NavServer::switchGlobalPlanner(const std::string & plugin_name)
       global_planner_.reset();
     }
     global_planner_ = global_planner_loader_.createSharedInstance(plugin_name);
-    global_planner_->configure(shared_from_this(), "global_planner", static_costmap_);
+    global_planner_->configure(shared_from_this(), "global_planner", global_costmap_);
     global_planner_->activate();
     current_global_plugin_ = plugin_name;
     RCLCPP_INFO(get_logger(), "Switched global planner to: %s", plugin_name.c_str());

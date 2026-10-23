@@ -32,6 +32,7 @@ namespace pnc_nav_core
 
 class Nav2CostmapAdapter;
 class RollingCostmap;
+class OverlayCostmap;
 
 /**
  * @enum NavState
@@ -131,6 +132,7 @@ private:
   // --- 代价地图 ---
   std::shared_ptr<Nav2CostmapAdapter> static_costmap_;// 全局：静态 /map（给全局规划器）
   std::shared_ptr<RollingCostmap> local_costmap_;// 局部：滚动窗口 + 障碍层（给局部规划器）
+  std::shared_ptr<OverlayCostmap> global_costmap_;// 全局：静态整图 + 窗口障碍叠加（给全局规划器）
   void updateLocalCostmap();// 每周期：滚动窗口 + 激光障碍更新
 
   // --- 控制循环 ---
