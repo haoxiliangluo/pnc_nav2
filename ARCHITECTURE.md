@@ -1,5 +1,9 @@
 # PNC Nav2 — 三维导航规划与控制系统 架构设计
 
+> ⚠️ 本文描述**目标架构（愿景）**，包含尚未实现的模块（`pnc_nav_map` / `pnc_nav_localization` / `pnc_nav_control`、
+> Go2、OctoMap/ESDF 等）。当前实现的契约与现状请看
+> [docs/design/implementation_status.md](docs/design/implementation_status.md) 与 [docs/design/](docs/design/)。
+
 ## 项目定位
 
 个人独立维护的导航规控项目，后续可能开源；核心聚焦：**三维导航中的规划与控制能力**。
