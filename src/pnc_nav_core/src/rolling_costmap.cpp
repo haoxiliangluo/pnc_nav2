@@ -102,22 +102,36 @@ void RollingCostmap::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr m
   const auto now = std::chrono::steady_clock::now();
   size_t added = 0;
 
+  last_scan_origin_x_ = tx;
+  last_scan_origin_y_ = ty;
+  last_scan_rays_.clear();
+  has_last_scan_ = true;
+
   for (size_t i = 0; i < msg->ranges.size(); ++i) {
     const double r = msg->ranges[i];
-    if (!std::isfinite(r) || r < msg->range_min || r > range_limit) {
-      continue;  // 无效/超量程：不当作障碍
-    }
-    if (r < 0.1) {
-      continue;  // 贴脸噪声（可能是机器人自身），跳过
-    }
+    const bool in_range = std::isfinite(r) && r >= msg->range_min && r <= range_limit;
 
+    // 超量程/无效的光束也要记录：用 max_range 截断做"纯清除"射线。
+    // 否则"障碍被搬走"后，光束直接打到 6m 外的墙上（超出 max_range 被丢弃），
+    // 旧障碍点会残留到 TTL 过期（raytrace 清除形同虚设）。
+    const double ray_len = in_range ? r : range_limit;
     const double angle = msg->angle_min + static_cast<double>(i) * msg->angle_increment;
-    const double lx = r * std::cos(angle);
-    const double ly = r * std::sin(angle);
+    const double lx = ray_len * std::cos(angle);
+    const double ly = ray_len * std::sin(angle);
+
+    ScanRay ray;
+    ray.ex = tx + cos_yaw * lx - sin_yaw * ly;
+    ray.ey = ty + sin_yaw * lx + cos_yaw * ly;
+    ray.hit = in_range && r > 0.1;
+    last_scan_rays_.push_back(ray);
+
+    if (!ray.hit) {
+      continue;  // 没打到东西：只清不标
+    }
 
     ObstaclePoint point;
-    point.x = tx + cos_yaw * lx - sin_yaw * ly;
-    point.y = ty + sin_yaw * lx + cos_yaw * ly;
+    point.x = ray.ex;
+    point.y = ray.ey;
     point.stamp = now;
     points_.push_back(point);
     ++added;
@@ -210,6 +224,35 @@ void RollingCostmap::rebuildGrid(const geometry_msgs::msg::PoseStamped & robot_p
       continue;
     }
     laser_mask[static_cast<size_t>(my) * width_ + mx] = 1;
+  }
+
+  // 2.5) raytrace 清除：用"最新一帧"的每条光束把沿途格子置为空闲；
+  // 命中格再补回来。静态层在独立的 static_mask 里，不会被这里清掉。
+  if (has_last_scan_) {
+    const double clear_step = 0.5 * resolution_;
+    for (const auto & ray : last_scan_rays_) {
+      const double dx = ray.ex - last_scan_origin_x_;
+      const double dy = ray.ey - last_scan_origin_y_;
+      const double dist = std::hypot(dx, dy);
+      const int steps = std::max(1, static_cast<int>(dist / clear_step));
+      for (int k = 0; k < steps; ++k) {
+        const double t = static_cast<double>(k) / steps;
+        int mx = 0;
+        int my = 0;
+        if (worldToCellPrecomputed(
+            last_scan_origin_x_ + t * dx, last_scan_origin_y_ + t * dy, mx, my))
+        {
+          laser_mask[static_cast<size_t>(my) * width_ + mx] = 0;
+        }
+      }
+      if (ray.hit) {
+        int mx = 0;
+        int my = 0;
+        if (worldToCellPrecomputed(ray.ex, ray.ey, mx, my)) {
+          laser_mask[static_cast<size_t>(my) * width_ + mx] = 1;
+        }
+      }
+    }
   }
 
   // 3) 膨胀（一次预计算，查询时 O(1)）

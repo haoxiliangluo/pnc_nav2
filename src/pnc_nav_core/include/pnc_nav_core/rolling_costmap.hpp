@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <deque>
+#include <utility>
 #include <memory>
 #include <string>
 #include <vector>
@@ -111,6 +112,18 @@ private:
   double last_center_y_{0.0};
 
   std::deque<ObstaclePoint> points_;
+
+  // 最近一帧激光（用于 raytrace 清除：光束穿过的格子视为空闲）
+  struct ScanRay
+  {
+    double ex;   // 射线终点（命中点，或 max_range 处的截断点）
+    double ey;
+    bool hit;    // true=命中障碍；false=超量程/无效（只清不标）
+  };
+  bool has_last_scan_{false};
+  double last_scan_origin_x_{0.0};
+  double last_scan_origin_y_{0.0};
+  std::vector<ScanRay> last_scan_rays_;
 };
 
 }  // namespace pnc_nav_core
