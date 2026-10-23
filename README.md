@@ -125,6 +125,40 @@ ros2 launch pnc_nav_bringup turtlebot3_test.launch.py
 当前 Phase 1 主路径使用 `Nav2CostmapAdapter` 订阅 `map_server` 发布的 `/map`
 (`nav_msgs/msg/OccupancyGrid`)。仿真由本仓库 `pnc_nav_sim` 提供（stock `gz-sim-diff-drive-system`）。
 
+### 通过 Action 发目标（主入口）
+
+目标点主入口是 `navigate_to_3d_pose`（`pnc_nav_interfaces/action/NavigateTo3DPose`），
+`/goal_pose` 话题保留为兼容入口（等价于不带 `planner_id` 的 action goal）。
+
+```bash
+ros2 action send_goal /navigate_to_3d_pose pnc_nav_interfaces/action/NavigateTo3DPose \
+  "{goal: {header: {frame_id: map}, pose: {position: {x: 2.0, y: 0.0}, orientation: {w: 1.0}}}, planner_id: '', max_planning_time: 0.0}" \
+  --feedback
+```
+
+| Goal 字段 | 说明 |
+|---|---|
+| `goal` | 目标位姿（frame_id 为空时按 `global_frame` 处理） |
+| `planner_id` | 非空时**热插拔**到指定全局规划器（如 `pnc_nav_planners::AStar2D`） |
+| `max_planning_time` | 单次规划超时 (s)，0 = 不限 |
+
+**Feedback**：`current_pose`、`distance_remaining`、`eta_seconds`、`number_of_recoveries`、`current_state`
+
+**Result.error_code**：`0` 成功 / `1` 无路径 / `2` 规划超时 / `3` 恢复重试耗尽 / `4` 取消（含被新目标抢占）/ `5` TF 失败 / `6` 无效目标 / `7` 插件未加载
+
+**取消与抢占**：新目标自动抢占旧目标（旧目标返回 `error_code=4`）；客户端取消走标准 action cancel。
+
+```bash
+# 冒烟测试（需先起仿真）
+python3 test/action_smoke_test.py feedback     # 可达目标 → success=true
+python3 test/action_smoke_test.py cancel       # 发目标后取消 → error_code=4
+python3 test/action_smoke_test.py unreachable  # 不可达目标 → error_code=3
+```
+
+恢复行为（`RECOVERING`）：原地旋转 `recovery_spin_duration` 秒 → 重新规划，重试上限由
+`max_planning_retries` 控制；`progress_timeout` 内位移不足 `progress_epsilon` 判定卡住并触发恢复。
+完整用例与结果见 [docs/phase2_验证清单.md](docs/phase2_验证清单.md)。
+
 ### 运行 3D 导航（Go2 机器狗，未来）
 
 ```bash

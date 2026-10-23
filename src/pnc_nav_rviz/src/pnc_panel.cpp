@@ -91,7 +91,6 @@ PncPanel::~PncPanel()
 
 void PncPanel::onInitialize()
 {
-  fprintf(stderr, "PNC_PANEL: onInitialize called\n");
   node_ = std::make_shared<rclcpp::Node>("pnc_panel");
   cmd_vel_pub_ = node_->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
   initialpose_pub_ = node_->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(

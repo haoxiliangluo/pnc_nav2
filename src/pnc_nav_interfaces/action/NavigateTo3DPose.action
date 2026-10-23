@@ -1,13 +1,16 @@
 # 3D导航目标
 geometry_msgs/PoseStamped goal
-string planner_id          # 可选：指定使用的规划器
-float64 max_planning_time  # 最大规划时间 (s)，0表示使用默认值
+string planner_id          # 可选：指定使用的规划器（空=用参数里的默认插件）
+float64 max_planning_time  # 单次规划超时 (s)，0表示使用默认值
+
 ---
 # Result
 bool success
+uint16 error_code          # 错误码：0成功 1无路径 2规划超时 3重试耗尽 4取消 5TF失败 6无效目标 7无规划器
 float64 total_time         # 总导航时间 (s)
 float64 distance_traveled  # 实际行驶距离 (m)
-string message
+string message             # 结果描述
+
 ---
 # Feedback
 geometry_msgs/PoseStamped current_pose

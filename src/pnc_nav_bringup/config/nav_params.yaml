@@ -11,6 +11,14 @@ nav_server:
     goal_tolerance_angle: 0.1        # 到达目标的角度容差 (rad)
     max_planning_retries: 3
 
+    # --- 恢复行为 / feedback / 看门狗 ---
+    recovery_spin_duration: 1.0     # 恢复时原地旋转时长 (s)
+    recovery_angular_vel: 0.6       # 恢复时旋转角速度 (rad/s)
+    feedback_eta_speed: 0.25       # 计算 ETA 的参考速度 (m/s)
+    progress_timeout: 8.0          # 多久无位移判卡住 (s)，<=0 关闭
+    progress_epsilon: 0.05         # 卡住判定的位移阈值 (m)
+    tf_timeout_ticks: 50           # 连续多少次拿不到 TF 判失败
+
     # --- 插件选择 ---
     global_planner_plugin: "pnc_nav_planners::AStar2D"
     local_planner_plugin: "pnc_nav_planners::DWA2D"         # baseline 默认走 path_tracker；测试 DWA 时改为 "pnc_nav_planners::DWA2D"

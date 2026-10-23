@@ -9,19 +9,23 @@ set(CMAKE_CXX_STANDARD 17)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(pnc_nav_interfaces REQUIRED)
 
 set(dependencies
   rclcpp
+  rclcpp_action
   pluginlib
   nav_msgs
   geometry_msgs
   tf2_ros
   tf2_geometry_msgs
+  pnc_nav_interfaces
 )
 
 # Navigation server library
