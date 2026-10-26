@@ -13,6 +13,8 @@
   <depend>nav_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
   <depend>pnc_nav_core</depend>
   <depend>pnc_nav_interfaces</depend>
 

@@ -12,6 +12,8 @@ find_package(rclcpp REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(pnc_nav_core REQUIRED)
 find_package(pnc_nav_interfaces REQUIRED)
 
@@ -20,6 +22,8 @@ set(dependencies
   nav_msgs
   sensor_msgs
   geometry_msgs
+  tf2
+  tf2_ros
   pnc_nav_core
   pnc_nav_interfaces
 )
@@ -27,6 +31,8 @@ set(dependencies
 add_library(${PROJECT_NAME} SHARED
   src/traversability.cpp
   src/elevation_map.cpp
+  src/elevation_builder.cpp
+  src/elevation_costmap.cpp
 )
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -34,7 +40,13 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 ament_target_dependencies(${PROJECT_NAME} ${dependencies})
 
+add_executable(elevation_map_node src/elevation_map_node.cpp)
+target_link_libraries(elevation_map_node ${PROJECT_NAME})
+ament_target_dependencies(elevation_map_node ${dependencies})
+
 install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY launch config DESTINATION share/${PROJECT_NAME})
+install(TARGETS elevation_map_node DESTINATION lib/${PROJECT_NAME})
 install(TARGETS ${PROJECT_NAME}
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
@@ -53,6 +65,8 @@ if(BUILD_TESTING)
   target_link_libraries(test_traversability ${PROJECT_NAME})
   ament_add_gtest(test_elevation_map test/test_elevation_map.cpp)
   target_link_libraries(test_elevation_map ${PROJECT_NAME})
+  ament_add_gtest(test_elevation_costmap test/test_elevation_costmap.cpp)
+  target_link_libraries(test_elevation_costmap ${PROJECT_NAME})
 endif()
 
 ament_package()

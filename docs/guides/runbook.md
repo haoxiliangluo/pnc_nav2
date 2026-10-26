@@ -27,6 +27,7 @@
 | `pnc_nav_bringup/turtlebot3_test.launch.py` | 旧入口名，同上 | ✅ 兼容 |
 | `pnc_nav_sim/gz_3d_lidar.launch.py` | 同一台差速车 + Velodyne 16 线（`diff_drive_3d.urdf.xacro` + `bridge_3d.yaml`） | ✅ 可用（输出 `/points`） |
 | `pnc_nav_bringup/gz_sim_3d_lidar_bringup.launch.py` | **3D 激光完整导航**：3D 车 + maps/111 + map_server + nav_server（点云障碍层）+ RViz | ✅ 可用 |
+| `pnc_nav_map/elevation_map.launch.py` | 高程图节点：`/points` → `/elevation_map` + `/traversability_map`（需先起 3D 仿真） | ✅ 可用（Phase 3.1） |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/sim_3d_bringup.launch.py` | 名义上的 Go2 3D 启动 | ❌ **不可用**：include 外部包 `go2_config` / `lio_sam`，本仓库不含 |
@@ -111,6 +112,22 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `cloud_stride` / `cloud_min_z` / `cloud_max_z` / `cloud_max_range` | 8 / 0.10 / 1.50 / 8.0 | 点云降采样与高度带过滤 |
 
 调试：`python3 test/check_costmap_layers.py` 打印窗口尺寸/原点/占用格数；RViz 看 `/costmap` 与 `/obstacle_layer`。
+
+### 3.2c `elevation.*`（2.5D 高程图节点）
+
+| 参数 | 现值 | 说明 |
+|---|---|---|
+| `cloud_topic` | `points` | 点云话题 |
+| `window_size` / `resolution` | 8.0 / 0.1 | 滚动窗口边长 / 高程格分辨率 |
+| `stride` | 8 | 每 N 个点取一个 |
+| `min_range` / `max_range` | 0.3 / 8.0 | 传感器系水平距离范围（m） |
+| `min_z` / `max_z` | **-0.30** / 1.50 | 高度带；**必须包含地面**（与障碍层的 0.10 不同） |
+| `recenter_threshold` | 1.0 | 机器人移动超过它才滚动窗口（m） |
+| `fill_radius` | 0.4 | 未知格填充半径（补 16 线激光地面环间空洞，取邻域最低 z） |
+| `slope_max_deg` / `step_max_m` / `roughness_max_m` | 20 / 0.10 / 0.05 | 可通行性阈值 |
+| `publish_rate` | 2.0 | 可视化发布频率（Hz） |
+
+验证：`ros2 topic echo /traversability_map --once`；RViz 用 Map 显示 `/elevation_map`（0=可通行，100=不可通行）。
 
 ### 3.3 `global_planner.*`（A* 系列）
 
@@ -276,3 +293,4 @@ colcon build --symlink-install --packages-select \
 | 2026-10-23 | 初版：启动矩阵、参数手册、插件切换、场景配方（commit `ed5280c`） |
 | 2026-10-23 | 新增 `local_costmap.*` 参数表、障碍层调试与动态障碍实验配方 |
 | 2026-10-23 | 新增点云障碍层参数、3D 激光 bringup 入口 |
+| 2026-10-23 | 新增高程图节点入口与 `elevation.*` 参数表 |

@@ -78,3 +78,15 @@ TEST(ElevationMap, GridExportKeepsUnknownCells)
   EXPECT_EQ(grid.data[0], 0);        // 唯一有数据的格 → 可通行
   EXPECT_EQ(grid.data[50], -1);      // 其它格 → 未知
 }
+
+TEST(ElevationMap, FillUnknownUsesLowestNeighbor)
+{
+  ElevationMap map(0.1, 0.0, 0.0, 10, 10);
+  map.addPoint(0.55, 0.55, -0.02);   // 一格地面
+  map.addPoint(0.55, 0.55, 0.60);    // 同一格还有墙点（均值会被抬高）
+
+  map.fillUnknown(0.25);
+  double z = 0.0;
+  ASSERT_TRUE(map.getGroundHeight(0.65, 0.55, z));
+  EXPECT_NEAR(z, -0.02, 1e-6);       // 填充取邻域"最低 z"，不会被墙高污染
+}

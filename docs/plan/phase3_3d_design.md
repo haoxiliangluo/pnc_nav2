@@ -138,12 +138,14 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 ## 7. 分阶段落地与验收
 
 ### 3.1 高程图 + 2.5D 可通行性（1–2 天）🟡 进行中
-- ✅ 新建 `pnc_nav_map` 包：`ElevationMap`（z 均值/min/max/count）+ `traversability` 纯函数
-  + 10 个 gtest 用例（平地/15° 坡/超阈值台阶/粗糙度/缺数据/代价映射/导出）
-- ⬜ `/points` → `ElevationMap` 的构建器（TF、降采样、高度带、窗口滚动）
-- ⬜ 节点发布 `TraversabilityMap` + `OccupancyGrid`（RViz 可视化）
-- **验收**：在仿真世界加一块 15° 斜坡与一个 10cm 台阶，RViz 能看到坡度/台阶图；
-  `getGroundHeight` 在斜坡上误差 < 0.05m
+- ✅ `ElevationMap`（z 均值/min/max/count）+ `traversability` 纯函数 + 15 个 gtest 用例
+- ✅ `ElevationBuilder`：`/points` → 高程图（TF、stride 降采样、高度带、滚动窗口、`fillUnknown` 补洞）
+- ✅ `ElevationCostmap`：实现 `CostmapInterface`（getCost / isOccupied / getTraversability / getGroundHeight）
+- ✅ 节点 `elevation_map_node`：发布 `/elevation_map`（OccupancyGrid）+ `/traversability_map`（TraversabilityMap）
+- ⬜ 斜坡/台阶 world 与 RViz 调参（下一步）
+- **实测（3D 激光车，8m 窗口 @0.1m）**：平地可通行性 0.90–0.98；箱子所在格 0.25（被判为难以通行）；
+  补洞后 6400/6400 格全部有数据；机器人移动后窗口原点从 (-4.00,-4.00) 滚到 (-2.90,-4.04)
+- **仍待验收**：15° 斜坡 / 10cm 台阶场景、`getGroundHeight` 误差 < 0.05m
 
 ### 3.2 地形代价接入规划（1 天）
 - `ElevationCostmap` 实现 `CostmapInterface`，`AStar3D` 用 `use_3d: true` 规划
@@ -206,3 +208,4 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 |---|---|
 | 2026-10-23 | 初版设计草案（commit `dcf7568`） |
 | 2026-10-23 | 3.1 第一步完成：`pnc_nav_map` 包 + `ElevationMap` + `traversability` + 10 个 gtest 全绿 |
+| 2026-10-23 | 3.1 主体完成：ElevationBuilder（含 fillUnknown 补洞）+ ElevationCostmap + 节点双话题；15 个 gtest 全绿 |

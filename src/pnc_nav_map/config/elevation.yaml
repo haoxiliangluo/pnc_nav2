@@ -1,0 +1,20 @@
+elevation_map_node:
+  ros__parameters:
+    use_sim_time: true
+    elevation:
+      cloud_topic: "points"        # 3D 激光点云（gz_3d_lidar 输出）
+      frame_id: "map"
+      robot_frame: "base_link"
+      window_size: 8.0             # 滚动窗口边长 (m)
+      resolution: 0.1              # 高程格分辨率 (m)
+      stride: 8                    # 每 N 个点取一个
+      min_range: 0.3               # 传感器系水平距离下限 (m)
+      max_range: 8.0               # 上限 (m)
+      min_z: -0.30                 # 高度带下限（含地面；障碍层才用 0.10 去地面）
+      max_z: 1.50                  # 高度带上限
+      recenter_threshold: 1.0      # 机器人移动超过它才滚动窗口 (m)
+      fill_radius: 0.4             # 未知格填充半径（补 16 线激光的地面环间空洞）
+      slope_max_deg: 20.0          # 可通行性阈值：坡度
+      step_max_m: 0.10             # 台阶
+      roughness_max_m: 0.05        # 粗糙度
+      publish_rate: 2.0            # 可视化发布频率 (Hz)

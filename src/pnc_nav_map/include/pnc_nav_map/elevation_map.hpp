@@ -38,6 +38,15 @@ public:
   /// 写入一个点（map 系）；超出范围返回 false
   bool addPoint(double x, double y, double z);
 
+  /**
+   * @brief 用邻域已知格的**最低高程**填充未知格（点云稀疏时的地面补洞）
+   *
+   * 16 线激光在地面形成的是同心圆环，环之间没有点 → 高程图大量空洞。
+   * 用"最低 z"填充可以让地面连续，同时避免把墙/箱子的高 z 抹到地面：
+   * 障碍格本身是"已知格"，会保留自身均值，因此台阶/障碍仍能被检测到。
+   */
+  void fillUnknown(double radius_m);
+
   bool worldToCell(double x, double y, int & mx, int & my) const;
   bool inBounds(double x, double y) const;
 

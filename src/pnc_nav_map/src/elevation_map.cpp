@@ -45,6 +45,49 @@ bool ElevationMap::addPoint(double x, double y, double z)
   return true;
 }
 
+void ElevationMap::fillUnknown(double radius_m)
+{
+  if (radius_m <= 0.0 || resolution_ <= 0.0 || cells_.empty()) {
+    return;
+  }
+  const int rc = std::max(1, static_cast<int>(std::ceil(radius_m / resolution_)));
+  std::vector<Cell> out = cells_;   // 先写副本，避免"边填边用"
+
+  for (int my = 0; my < height_; ++my) {
+    for (int mx = 0; mx < width_; ++mx) {
+      const size_t idx = static_cast<size_t>(indexOf(mx, my));
+      if (cells_[idx].hasData()) {
+        continue;
+      }
+      double lowest = std::numeric_limits<double>::infinity();
+      for (int dy = -rc; dy <= rc; ++dy) {
+        const int ny = my + dy;
+        if (ny < 0 || ny >= height_) {
+          continue;
+        }
+        for (int dx = -rc; dx <= rc; ++dx) {
+          const int nx = mx + dx;
+          if (nx < 0 || nx >= width_) {
+            continue;
+          }
+          const Cell & c = cells_[static_cast<size_t>(indexOf(nx, ny))];
+          if (c.hasData() && std::hypot(dx, dy) <= rc) {
+            // 用格内最低点（而不是均值）：地面是最低的表面，墙/箱子的高点不会污染填充
+            lowest = std::min(lowest, c.z_min);
+          }
+        }
+      }
+      if (std::isfinite(lowest)) {
+        out[idx].z_sum = lowest;
+        out[idx].z_min = lowest;
+        out[idx].z_max = lowest;
+        out[idx].count = 1;
+      }
+    }
+  }
+  cells_.swap(out);
+}
+
 bool ElevationMap::worldToCell(double x, double y, int & mx, int & my) const
 {
   if (resolution_ <= 0.0 || width_ <= 0 || height_ <= 0) {
