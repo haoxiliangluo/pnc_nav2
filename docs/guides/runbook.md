@@ -30,6 +30,7 @@
 | `pnc_nav_bringup/gz_sim_3d_lidar_bringup.launch.py` | **3D 激光完整导航**：3D 车 + maps/111 + map_server + nav_server（点云障碍层）+ RViz | ✅ 可用 |
 | `pnc_nav_map/elevation_map.launch.py` | 高程图节点：`/points` → `/elevation_map` + `/traversability_map`（需先起 3D 仿真） | ✅ 可用（Phase 3.1） |
 | `gz_sim_3d_lidar_bringup.launch.py use_elevation:=true world:=slope_test.sdf` | 坡道/台阶场景 + 地形代价（Phase 3 验收） | ✅ 可用 |
+| `pnc_nav_task/mission.launch.py auto_start:=true` | 任务层：顺序多点 + 重试 + 暂停/取消（`/mission_status`） | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/sim_3d_bringup.launch.py` | 名义上的 Go2 3D 启动 | ❌ **不可用**：include 外部包 `go2_config` / `lio_sam`，本仓库不含 |
@@ -130,6 +131,19 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `cloud_stride` / `cloud_min_z` / `cloud_max_z` / `cloud_max_range` | 8 / 0.10 / 1.50 / 8.0 | 点云降采样与高度带过滤 |
 
 调试：`python3 test/check_costmap_layers.py` 打印窗口尺寸/原点/占用格数；RViz 看 `/costmap` 与 `/obstacle_layer`。
+
+### 3.2e `mission.*`（任务层）
+
+| 参数 | 现值 | 说明 |
+|---|---|---|
+| `waypoints` | `[1.0, 0.0, 2.0, 0.0]` | 扁平数组 x1,y1,x2,y2,... |
+| `max_retries` | 1 | 每个点失败后重试次数（总尝试 = 1+N） |
+| `loop` | false | 跑完是否从头再来 |
+| `auto_start` | false | 启动即开始 |
+| `frame_id` / `tick_period` | map / 0.2 | 目标坐标系 / 调度周期 |
+
+服务：`/mission/start|pause|resume|cancel`（`std_srvs/Trigger`）；状态话题：`/mission_status`。
+导航侧另有 `/nav_status`（state/error_code/剩余距离/恢复次数/耗时）。
 
 ### 3.2d `health.*`（健康监控）
 
@@ -329,3 +343,4 @@ colcon build --symlink-install --packages-select \
 | 2026-10-23 | 新增点云障碍层参数、3D 激光 bringup 入口 |
 | 2026-10-23 | 新增高程图节点入口与 `elevation.*` 参数表 |
 | 2026-10-23 | 新增统一入口 `bringup.launch.py`（profile 化）与 health_monitor |
+| 2026-10-23 | 新增任务层 `pnc_nav_task`（多点/重试/暂停取消）与 `/nav_status`、`/mission_status` |

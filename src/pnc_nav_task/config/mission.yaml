@@ -1,0 +1,11 @@
+mission_executor:
+  ros__parameters:
+    use_sim_time: true
+    mission:
+      auto_start: false            # true = 启动即开始跑
+      loop: false                  # true = 跑完一轮后从头再来
+      max_retries: 1               # 每个点失败后的重试次数
+      frame_id: "map"
+      tick_period: 0.2             # 调度周期 (s)
+      # 依次执行的点位：x1, y1, x2, y2, ...
+      waypoints: [1.0, 0.0, 2.0, 0.0]

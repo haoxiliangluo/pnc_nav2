@@ -168,6 +168,7 @@ void NavServer::initialize()
   cmd_vel_pub_ = create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
   costmap_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>("costmap", 1);
   obstacle_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>("obstacle_layer", 1);
+  nav_status_pub_ = create_publisher<pnc_nav_interfaces::msg::NavStatus>("nav_status", 1);
 
   // 订阅目标点（兼容入口）
   goal_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
@@ -422,6 +423,7 @@ void NavServer::finishGoal(NavErrorCode code, const std::string & message)
     } else {
       goal_handle_->abort(result);
     }
+    last_error_code_ = static_cast<uint16_t>(code);
     RCLCPP_INFO(
       get_logger(), "Goal finished: success=%s error_code=%u(%s) time=%.1fs distance=%.2fm msg=%s",
       success ? "true" : "false", static_cast<unsigned>(code), toString(code),
@@ -432,12 +434,14 @@ void NavServer::finishGoal(NavErrorCode code, const std::string & message)
       success ? "succeeded" : "failed", toString(code), message.c_str());
   }
 
+  last_error_code_ = static_cast<uint16_t>(code);
   goal_handle_.reset();
   goal_active_ = false;
   cancel_requested_ = false;
   has_last_progress_ = false;
   has_last_position_ = false;
   transitionTo(success ? NavState::SUCCEEDED : NavState::FAILED);
+  publishNavStatus();
 }
 
 void NavServer::publishFeedback(const geometry_msgs::msg::PoseStamped & pose)
@@ -454,6 +458,39 @@ void NavServer::publishFeedback(const geometry_msgs::msg::PoseStamped & pose)
   feedback->number_of_recoveries = recovery_count_;
   feedback->current_state = toString(state_);
   goal_handle_->publish_feedback(feedback);
+}
+
+void NavServer::publishNavStatus()
+{
+  if (!nav_status_pub_) {
+    return;
+  }
+  pnc_nav_interfaces::msg::NavStatus msg;
+  msg.header.stamp = now();
+  msg.header.frame_id = global_frame_;
+
+  switch (state_) {
+    case NavState::IDLE: msg.state = pnc_nav_interfaces::msg::NavStatus::IDLE; break;
+    case NavState::PLANNING: msg.state = pnc_nav_interfaces::msg::NavStatus::PLANNING; break;
+    case NavState::FOLLOWING: msg.state = pnc_nav_interfaces::msg::NavStatus::FOLLOWING; break;
+    case NavState::RECOVERING: msg.state = pnc_nav_interfaces::msg::NavStatus::RECOVERING; break;
+    case NavState::SUCCEEDED: msg.state = pnc_nav_interfaces::msg::NavStatus::SUCCEEDED; break;
+    case NavState::FAILED: msg.state = pnc_nav_interfaces::msg::NavStatus::FAILED; break;
+  }
+
+  msg.error_code = last_error_code_;
+  msg.recoveries = recovery_count_;
+  msg.total_time = goal_active_ ? secondsSince(goal_start_time_) : 0.0;
+  msg.message = toString(state_);
+
+  if (goal_active_) {
+    geometry_msgs::msg::PoseStamped pose;
+    if (getCurrentPose(pose)) {
+      msg.distance_remaining = distance2D(pose, current_goal_);
+    }
+  }
+
+  nav_status_pub_->publish(msg);
 }
 
 bool NavServer::enterRecovery(const std::string & reason)
@@ -614,6 +651,10 @@ void NavServer::controlLoop()
   // 代价地图可视化：每 10 帧（约 0.5s）发布一次（任意状态）
   if (costmap_frame_count_++ % 10 == 0) {
     publishCostmap();
+  }
+  // 状态外发：每 5 帧（4Hz）
+  if (costmap_frame_count_ % 5 == 0) {
+    publishNavStatus();
   }
 
   // 取消请求：任意状态优先处理，先停车再回 result

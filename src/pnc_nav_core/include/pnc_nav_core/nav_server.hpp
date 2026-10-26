@@ -21,6 +21,7 @@
 #include "tf2_ros/transform_listener.h"
 
 #include "pnc_nav_interfaces/action/navigate_to3_d_pose.hpp"
+#include "pnc_nav_interfaces/msg/nav_status.hpp"
 
 #include "pnc_nav_core/global_planner_base.hpp"
 #include "pnc_nav_core/local_planner_base.hpp"
@@ -148,6 +149,7 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr costmap_pub_;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr obstacle_pub_;
+  rclcpp::Publisher<pnc_nav_interfaces::msg::NavStatus>::SharedPtr nav_status_pub_;
   uint32_t costmap_frame_count_{0};
   void publishCostmap();
   void stopRobot();// 发布零速，保证任何退出路径都先停车
@@ -182,6 +184,9 @@ private:
   /// 发布 feedback（距离/ETA/恢复次数/当前状态）
   void publishFeedback(const geometry_msgs::msg::PoseStamped & pose);
 
+  /// 状态外发（给任务层/HMI/监控；action feedback 仍保留）
+  void publishNavStatus();
+
   /// 进入恢复行为（计数 +1，记录开始时间）；重试耗尽时直接结束会话并返回 false
   bool enterRecovery(const std::string & reason);
 
@@ -193,6 +198,7 @@ private:
   nav_msgs::msg::Path current_global_path_;
   geometry_msgs::msg::Twist current_velocity_;
   bool goal_active_{false};
+  uint16_t last_error_code_{0};// 最近一次会话结束的错误码
   bool cancel_requested_{false};
   uint16_t recovery_count_{0};
   double distance_traveled_{0.0};

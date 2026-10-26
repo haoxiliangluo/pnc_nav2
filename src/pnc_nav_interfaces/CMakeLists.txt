@@ -12,6 +12,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/RobotState.msg"
   "msg/JointCommands.msg"
   "msg/PlannerStatus.msg"
+  "msg/NavStatus.msg"
+  "msg/MissionStatus.msg"
   "srv/SetMap.srv"
   "srv/SwitchPlanner.srv"
   "action/NavigateTo3DPose.action"
