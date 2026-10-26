@@ -39,6 +39,8 @@ public:
     params.fill_radius = declare_parameter<double>("elevation.fill_radius", params.fill_radius);
     params.robot_clear_radius = declare_parameter<double>(
       "elevation.robot_clear_radius", params.robot_clear_radius);
+    params.slope_baseline_cells = declare_parameter<int>(
+      "elevation.slope_baseline_cells", params.slope_baseline_cells);
     params.trav.slope_max_deg = declare_parameter<double>(
       "elevation.slope_max_deg", params.trav.slope_max_deg);
     params.trav.step_max_m = declare_parameter<double>(

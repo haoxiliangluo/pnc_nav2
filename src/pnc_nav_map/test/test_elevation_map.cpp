@@ -90,3 +90,25 @@ TEST(ElevationMap, FillUnknownUsesLowestNeighbor)
   ASSERT_TRUE(map.getGroundHeight(0.65, 0.55, z));
   EXPECT_NEAR(z, -0.02, 1e-6);       // 填充取邻域"最低 z"，不会被墙高污染
 }
+
+TEST(ElevationMap, NoisyRampSlopeIsNotAmplified)
+{
+  // KI-018 回归：15° 斜坡 + 每格 ±0.02m 噪声，坡度估计不应被放大到 25°+。
+  ElevationMap map(0.1, 0.0, 0.0, 40, 20);
+  const double slope = std::tan(15.0 * M_PI / 180.0);
+  for (int mx = 0; mx < map.width(); ++mx) {
+    for (int my = 0; my < map.height(); ++my) {
+      const double x = map.originX() + (mx + 0.5) * map.resolution();
+      const double y = map.originY() + (my + 0.5) * map.resolution();
+      const double noise = ((mx * 7 + my * 13) % 5 - 2) * 0.01;   // 确定性 ±0.02m
+      map.addPoint(x, y, slope * x + noise);
+    }
+  }
+
+  // 与 config/elevation.yaml 的 slope_max_deg=25 对齐：15° 坡的分项得分 = 1-15/25 = 0.4
+  TraversabilityParams params;
+  params.slope_max_deg = 25.0;
+  const auto t = map.traversabilityAt(2.0, 1.0, params);
+  EXPECT_NEAR(t.slope_rad * 180.0 / M_PI, 15.0, 4.0);
+  EXPECT_GT(t.score, 0.35);
+}

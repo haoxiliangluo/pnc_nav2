@@ -23,6 +23,7 @@ ElevationBuilder::ElevationBuilder(
   map_ = std::make_shared<ElevationMap>(
     params_.resolution, -0.5 * cells * params_.resolution, -0.5 * cells * params_.resolution,
     cells, cells);
+  map_->setSlopeBaselineCells(params_.slope_baseline_cells);
 
   cloud_sub_ = node_->create_subscription<sensor_msgs::msg::PointCloud2>(
     params_.cloud_topic, rclcpp::SensorDataQoS(),

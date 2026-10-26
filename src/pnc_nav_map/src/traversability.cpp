@@ -68,13 +68,13 @@ Traversability evaluateTraversability(
   double cell_size,
   const TraversabilityParams & params)
 {
-  Traversability out;
   if (!std::isfinite(center_z) || neighbors.size() < 8 || cell_size <= 1e-6) {
+    Traversability out;
     out.score = -1.0;
     return out;
   }
 
-  // 坡度：中心差分（只在与中心相对的格都有效时计算）
+  // 中心差分坡度（相邻格）
   double dzdx = 0.0;
   double dzdy = 0.0;
   bool have_dx = false;
@@ -87,10 +87,23 @@ Traversability evaluateTraversability(
     dzdy = (neighbors[kNorth] - neighbors[kSouth]) / (2.0 * cell_size);
     have_dy = true;
   }
-  if (have_dx || have_dy) {
-    out.slope_rad = slopeRadFromGradient(dzdx, dzdy);
+  const double slope = (have_dx || have_dy) ? slopeRadFromGradient(dzdx, dzdy) : 0.0;
+  return evaluateTraversabilityFromSlope(center_z, neighbors, slope, params);
+}
+
+Traversability evaluateTraversabilityFromSlope(
+  double center_z,
+  const std::vector<double> & neighbors,
+  double slope_rad,
+  const TraversabilityParams & params)
+{
+  Traversability out;
+  if (!std::isfinite(center_z) || neighbors.size() < 8) {
+    out.score = -1.0;
+    return out;
   }
 
+  out.slope_rad = std::isfinite(slope_rad) ? slope_rad : 0.0;
   out.step_m = stepFromNeighbors(center_z, neighbors);
   out.roughness_m = roughnessFromSamples(neighbors);
 

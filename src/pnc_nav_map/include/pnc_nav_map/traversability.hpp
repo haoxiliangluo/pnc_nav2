@@ -57,6 +57,16 @@ Traversability evaluateTraversability(
   double cell_size,
   const TraversabilityParams & params);
 
+/**
+ * @brief 同上，但坡度由调用方给定（用于"宽基线"求梯度，抑制噪声）
+ * @param slope_rad 已算好的坡度角（弧度）
+ */
+Traversability evaluateTraversabilityFromSlope(
+  double center_z,
+  const std::vector<double> & neighbors,
+  double slope_rad,
+  const TraversabilityParams & params);
+
 /// 可通行性 → 代价（score<0 返回 255=未知；1→0，0→lethal_cost）
 uint8_t traversabilityToCost(double score, uint8_t lethal_cost = 254);
 

@@ -186,7 +186,37 @@ Traversability ElevationMap::traversabilityAt(
     }
   }
 
-  return evaluateTraversability(smoothed_center, neighbors, resolution_, params);
+  // 宽基线求坡度：用 ±N 格（默认 ±0.2m）的平滑高程做中心差分。
+  // 相邻格差分对 16 线激光的噪声太敏感（15° 坡会被放大到 25–34°，KI-018）。
+  double slope_rad = 0.0;
+  const int base = std::max(1, slope_baseline_cells_);
+  double east = nan;
+  double west = nan;
+  double north = nan;
+  double south = nan;
+  if (!boxMean(mx + base, my, east)) {east = nan;}
+  if (!boxMean(mx - base, my, west)) {west = nan;}
+  if (!boxMean(mx, my + base, north)) {north = nan;}
+  if (!boxMean(mx, my - base, south)) {south = nan;}
+
+  const double span = 2.0 * base * resolution_;
+  double dzdx = 0.0;
+  double dzdy = 0.0;
+  bool have_dx = false;
+  bool have_dy = false;
+  if (std::isfinite(east) && std::isfinite(west) && span > 1e-6) {
+    dzdx = (east - west) / span;
+    have_dx = true;
+  }
+  if (std::isfinite(north) && std::isfinite(south) && span > 1e-6) {
+    dzdy = (north - south) / span;
+    have_dy = true;
+  }
+  if (have_dx || have_dy) {
+    slope_rad = slopeRadFromGradient(dzdx, dzdy);
+  }
+
+  return evaluateTraversabilityFromSlope(smoothed_center, neighbors, slope_rad, params);
 }
 
 nav_msgs::msg::OccupancyGrid ElevationMap::toOccupancyGrid(

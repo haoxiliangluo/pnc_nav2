@@ -55,7 +55,10 @@ public:
   /// 指定格是否有数据
   bool hasData(int mx, int my) const;
 
-  /// 该点可通行性（8 邻域 + 中心差分坡度）
+  /// 求坡度的基线（单位：格）。1=相邻格（噪声大），2~3 更稳（默认 2）
+  void setSlopeBaselineCells(int cells) {slope_baseline_cells_ = std::max(1, cells);}
+
+  /// 该点可通行性（3×3 平滑 + 宽基线中心差分坡度 + 邻域台阶/粗糙度）
   Traversability traversabilityAt(
     double x, double y, const TraversabilityParams & params) const;
 
@@ -89,6 +92,7 @@ private:
   double resolution_{0.1};
   double origin_x_{0.0};
   double origin_y_{0.0};
+  int slope_baseline_cells_{2};
   int width_{0};
   int height_{0};
   std::vector<Cell> cells_;

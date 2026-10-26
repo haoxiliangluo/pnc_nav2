@@ -15,6 +15,7 @@ elevation_map_node:
       recenter_threshold: 1.0      # 机器人移动超过它才滚动窗口 (m)
       fill_radius: 0.4             # 未知格填充半径（补 16 线激光的地面环间空洞）
       robot_clear_radius: 0.45     # 机器人自身半径内的点直接丢弃（防止把自己当障碍）
+      slope_baseline_cells: 2      # 求坡度基线（格）：2≈0.2m，抑制 16 线激光噪声
       slope_max_deg: 25.0          # 可通行性阈值：坡度（15° 缓坡要能过，25° 以上判不可通行）
       step_max_m: 0.10             # 台阶
       roughness_max_m: 0.05        # 粗糙度

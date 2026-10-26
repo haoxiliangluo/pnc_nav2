@@ -166,8 +166,9 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 - ✅ 开启 `use_elevation_costmap` 时，局部规划器的代价地图 =
   `OverlayCostmap(RollingCostmap, 地形)`（局部窗口优先、缺数据回退激光层）
 - 实测（平地）：DWA 目标 2m → 9.7s / 1.86m；回程 0.2m → 11.5s / 1.54m
-- ⬜ 坡道场景未验证：坡顶可通行性被估到 0.04（KI-018），DWA 会当成障碍 → 可能拒绝爬坡，
-  需要先改善坡度估计或把 `elevation_lethal_score` 调低（0.2）
+- ❌ 坡道场景**未通过**：DWA+地形卡在坡底 x≈1.1（`error_code=3` stuck）——坡面高程空洞造成
+  假台阶，可通行性 0.17–0.5 被当成障碍（KI-018 已修坡度幅值，KI-019 记录覆盖率问题）
+- ✅ 坡度估计已修：15° 坡实测 13–16°（宽基线 2 格 + 3×3 平滑），单测回归通过
 
 ### 3.4 定位接口预留（0.5 天，不实现算法）
 - 文档写明 `map→odom` 由 AMCL / LIO-SAM / Cartographer 提供，NavServer 只查 TF
