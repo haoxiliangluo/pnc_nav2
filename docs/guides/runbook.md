@@ -26,6 +26,7 @@
 | `pnc_nav_bringup/sim_2d_bringup.launch.py` | 旧入口名，转发到 `gz_sim_2d_bringup` | ✅ 兼容 |
 | `pnc_nav_bringup/turtlebot3_test.launch.py` | 旧入口名，同上 | ✅ 兼容 |
 | `pnc_nav_sim/gz_3d_lidar.launch.py` | 同一台差速车 + Velodyne 16 线（`diff_drive_3d.urdf.xacro` + `bridge_3d.yaml`） | ✅ 可用（输出 `/points`） |
+| `pnc_nav_bringup/gz_sim_3d_lidar_bringup.launch.py` | **3D 激光完整导航**：3D 车 + maps/111 + map_server + nav_server（点云障碍层）+ RViz | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/sim_3d_bringup.launch.py` | 名义上的 Go2 3D 启动 | ❌ **不可用**：include 外部包 `go2_config` / `lio_sam`，本仓库不含 |
@@ -106,6 +107,8 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `cost_scaling_factor` | 3.0 | 代价衰减系数 |
 | `include_static` | true | 是否把静态图障碍叠进窗口（激光能覆盖时影响很小） |
 | `unknown_as_occupied` | false | 窗口外是否当障碍 |
+| `cloud_topic` | "" | 点云话题；填 `points` 启用 3D 点云障碍层（与 scan 二选一） |
+| `cloud_stride` / `cloud_min_z` / `cloud_max_z` / `cloud_max_range` | 8 / 0.10 / 1.50 / 8.0 | 点云降采样与高度带过滤 |
 
 调试：`python3 test/check_costmap_layers.py` 打印窗口尺寸/原点/占用格数；RViz 看 `/costmap` 与 `/obstacle_layer`。
 
@@ -271,3 +274,4 @@ colcon build --symlink-install --packages-select \
 |---|---|
 | 2026-10-23 | 初版：启动矩阵、参数手册、插件切换、场景配方（commit `ed5280c`） |
 | 2026-10-23 | 新增 `local_costmap.*` 参数表、障碍层调试与动态障碍实验配方 |
+| 2026-10-23 | 新增点云障碍层参数、3D 激光 bringup 入口 |

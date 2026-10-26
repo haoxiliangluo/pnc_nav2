@@ -7,6 +7,7 @@
 #include <cmath>
 #include <limits>
 
+#include "sensor_msgs/point_cloud2_iterator.hpp"
 #include "tf2/utils.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
@@ -15,7 +16,7 @@ namespace pnc_nav_core
 
 namespace
 {
-constexpr double kMaxObstaclePoints = 20000.0;   // 障碍点上限（防止长时间运行内存膨胀）
+constexpr double kMaxObstaclePoints = 200000.0;  // 障碍点上限（点云层比 2D 扫描点多，放宽到 20 万）
 constexpr double kRebuildMoveThreshold = 0.25;    // 机器人移动超过这个距离才重建 (m)
 }  // namespace
 
@@ -41,6 +42,14 @@ RollingCostmap::RollingCostmap(
     "local_costmap.unknown_as_occupied", unknown_as_occupied_);
   const std::string scan_topic = node_->declare_parameter<std::string>(
     "local_costmap.scan_topic", "nav_scan");
+  cloud_topic_ = node_->declare_parameter<std::string>("local_costmap.cloud_topic", "");
+  cloud_stride_ = node_->declare_parameter<int>("local_costmap.cloud_stride", cloud_stride_);
+  cloud_min_z_ = node_->declare_parameter<double>("local_costmap.cloud_min_z", cloud_min_z_);
+  cloud_max_z_ = node_->declare_parameter<double>("local_costmap.cloud_max_z", cloud_max_z_);
+  cloud_max_range_ = node_->declare_parameter<double>(
+    "local_costmap.cloud_max_range", cloud_max_range_);
+  cloud_stride_ = std::max(1, cloud_stride_);
+  cloud_max_range_ = std::max(1.0, cloud_max_range_);
 
   // 参数清洗
   window_size_ = std::max(1.0, window_size_);
@@ -55,16 +64,31 @@ RollingCostmap::RollingCostmap(
     frame_id_ = static_layer_->getFrameId();
   }
 
-  scan_sub_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
-    scan_topic, rclcpp::SensorDataQoS(),
-    std::bind(&RollingCostmap::scanCallback, this, std::placeholders::_1));
+  // 2D 扫描与 3D 点云二选一：配置了 cloud_topic 就只订阅点云，
+  // 避免在没有 nav_scan 的 3D 车上刷 "cannot transform laser" 的告警。
+  if (cloud_topic_.empty()) {
+    scan_sub_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
+      scan_topic, rclcpp::SensorDataQoS(),
+      std::bind(&RollingCostmap::scanCallback, this, std::placeholders::_1));
+  } else {
+    cloud_sub_ = node_->create_subscription<sensor_msgs::msg::PointCloud2>(
+      cloud_topic_, rclcpp::SensorDataQoS(),
+      std::bind(&RollingCostmap::cloudCallback, this, std::placeholders::_1));
+  }
 
   RCLCPP_INFO(
     node_->get_logger(),
-    "RollingCostmap: scan=%s window=%.1fm res=%.3f ttl=%.1fs max_range=%.1fm "
+    "RollingCostmap: scan=%s cloud=%s window=%.1fm res=%.3f ttl=%.1fs max_range=%.1fm "
     "inflation=%.2f include_static=%s",
-    scan_topic.c_str(), window_size_, resolution_, obstacle_ttl_, max_range_,
+    scan_topic.c_str(), cloud_topic_.empty() ? "<disabled>" : cloud_topic_.c_str(),
+    window_size_, resolution_, obstacle_ttl_, max_range_,
     inflation_radius_, include_static_ ? "true" : "false");
+  if (!cloud_topic_.empty()) {
+    RCLCPP_INFO(
+      node_->get_logger(),
+      "RollingCostmap: point cloud layer: stride=%d z=[%.2f, %.2f] m range<=%.1f m",
+      cloud_stride_, cloud_min_z_, cloud_max_z_, cloud_max_range_);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +166,79 @@ void RollingCostmap::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr m
     points_.pop_front();
   }
 
+  if (added > 0) {
+    dirty_ = true;
+  }
+}
+
+void RollingCostmap::cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
+{
+  if (!enabled_ || !tf_buffer_) {
+    return;
+  }
+
+  geometry_msgs::msg::TransformStamped tf;
+  try {
+    tf = tf_buffer_->lookupTransform(frame_id_, msg->header.frame_id, tf2::TimePointZero);
+  } catch (const tf2::TransformException & ex) {
+    RCLCPP_WARN_THROTTLE(
+      node_->get_logger(), *node_->get_clock(), 2000,
+      "RollingCostmap: cannot transform cloud %s -> %s: %s",
+      msg->header.frame_id.c_str(), frame_id_.c_str(), ex.what());
+    return;
+  }
+
+  const double tx = tf.transform.translation.x;
+  const double ty = tf.transform.translation.y;
+  const double tz = tf.transform.translation.z;
+  const double yaw = tf2::getYaw(tf.transform.rotation);
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+
+  const auto now = std::chrono::steady_clock::now();
+  size_t added = 0;
+  size_t index = 0;
+
+  sensor_msgs::PointCloud2ConstIterator<float> it_x(*msg, "x");
+  sensor_msgs::PointCloud2ConstIterator<float> it_y(*msg, "y");
+  sensor_msgs::PointCloud2ConstIterator<float> it_z(*msg, "z");
+
+  for (; it_x != it_x.end(); ++it_x, ++it_y, ++it_z, ++index) {
+    if (cloud_stride_ > 1 && (index % static_cast<size_t>(cloud_stride_)) != 0) {
+      continue;
+    }
+    const double px = *it_x;
+    const double py = *it_y;
+    const double pz = *it_z;
+    if (!std::isfinite(px) || !std::isfinite(py) || !std::isfinite(pz)) {
+      continue;
+    }
+    // 传感器系内先做距离/近距过滤（省掉后面的坐标变换）
+    const double range = std::hypot(px, py);
+    if (range < 0.3 || range > cloud_max_range_) {
+      continue;
+    }
+
+    const double mx = tx + cos_yaw * px - sin_yaw * py;
+    const double my = ty + sin_yaw * px + cos_yaw * py;
+    const double mz = tz + pz;
+
+    // 高度带过滤：2.5D 投影，滤掉地面点和过高的点
+    if (mz < cloud_min_z_ || mz > cloud_max_z_) {
+      continue;
+    }
+
+    ObstaclePoint point;
+    point.x = mx;
+    point.y = my;
+    point.stamp = now;
+    points_.push_back(point);
+    ++added;
+  }
+
+  while (points_.size() > static_cast<size_t>(kMaxObstaclePoints)) {
+    points_.pop_front();
+  }
   if (added > 0) {
     dirty_ = true;
   }

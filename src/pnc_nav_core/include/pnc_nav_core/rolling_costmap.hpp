@@ -13,6 +13,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/laser_scan.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "tf2_ros/buffer.h"
@@ -75,6 +76,8 @@ private:
   };
 
   void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg);
+  /// 点云障碍层（2.5D 投影）：把 /points 按高度带过滤后压到 2D 栅格
+  void cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
   void expirePoints();
   void rebuildGrid(const geometry_msgs::msg::PoseStamped & robot_pose);
   bool worldToCell(double wx, double wy, int & mx, int & my) const;
@@ -85,6 +88,7 @@ private:
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<Nav2CostmapAdapter> static_layer_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_sub_;
 
   // --- 参数 ---
   bool enabled_{true};
@@ -97,6 +101,13 @@ private:
   double cost_scaling_factor_{3.0};
   bool include_static_{true};     // 是否把静态图障碍叠加到窗口里
   bool unknown_as_occupied_{false};
+
+  // --- 点云障碍层参数（3D 激光用；留空 cloud_topic 表示不启用）---
+  std::string cloud_topic_;
+  int cloud_stride_{8};           // 每 N 个点取一个（降采样）
+  double cloud_min_z_{0.10};      // 高度带下限（map 系，滤掉地面）
+  double cloud_max_z_{1.50};      // 高度带上限（滤掉树枝/天花板）
+  double cloud_max_range_{8.0};   // 只取这个水平距离内的点 (m)
 
   // --- 窗口状态 ---
   std::string frame_id_{"map"};

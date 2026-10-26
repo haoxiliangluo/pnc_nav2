@@ -65,6 +65,13 @@ nav_server:
       include_static: true          # 是否把静态图障碍也叠进窗口
       unknown_as_occupied: false    # 窗口外按"未知"处理（false = 不当障碍）
 
+      # --- 点云障碍层（3D 激光，2.5D 投影；2D 车留空即可）---
+      cloud_topic: ""               # 填 "points" 启用（gz_3d_lidar 的点云话题）
+      cloud_stride: 8               # 每 N 个点取一个（降采样，16 线约 2.9 万点/帧）
+      cloud_min_z: 0.10             # 高度带下限（map 系，滤掉地面）
+      cloud_max_z: 1.50             # 高度带上限（滤掉高处结构）
+      cloud_max_range: 8.0          # 只取该水平距离内的点 (m)
+
     # --- 全局规划器参数: 与插件实例名 global_planner 对齐 ---
     global_planner:
       resolution: 0.1              # 搜索分辨率 (m)

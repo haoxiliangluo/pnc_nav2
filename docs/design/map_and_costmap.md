@@ -65,6 +65,37 @@
 
 ---
 
+## 2.1 点云障碍层（3D 激光，2.5D 投影）
+
+3D 激光车（`gz_3d_lidar.launch.py`）输出 `sensor_msgs/PointCloud2` 到 `/points`（Velodyne 16 线，
+水平 360°、垂直 ±15°、10Hz）。`RollingCostmap` 用同一套窗口/膨胀逻辑，把点云**压到 2D**：
+
+```
+/points ──TF(velodyne→map)──▶ 逐点变换
+   ├ 降采样：每 cloud_stride 个点取一个（默认 8，约 3.6k 点/帧）
+   ├ 距离过滤：0.3m < 水平距离 ≤ cloud_max_range（默认 8m）
+   ├ 高度带过滤：cloud_min_z ≤ z ≤ cloud_max_z（默认 0.10–1.50m，滤掉地面与高处结构）
+   └ 投影到 2D 栅格 → 与 2D 扫描共用障碍点队列（TTL 过期）
+```
+
+**为什么是 2.5D 投影而不是真 3D**：轮式底盘只关心"能不能从这一列通过"，把点云按高度带压成
+2D 障碍图就够用，代价是**会丢掉"从下方可钻过去"这类信息**（比如桌底）。真正的 3D 规划
+（OctoMap / 高程图 / 可通行性）属于 Phase 3，接口已经在 `CostmapInterface` 里留好
+（`getGroundHeight` / `getTraversability` / `getDistanceToObstacle`）。
+
+**2D 扫描与点云二选一**：配置了 `cloud_topic` 就只订阅点云，不再订阅 `scan_topic`
+（3D 车上没有 `nav_scan`，避免刷 "cannot transform laser" 告警）。
+
+### 实测（3D 激光车）
+
+| 项 | 结果 |
+|---|---|
+| `/points` 频率 | ~4.4Hz（gz 桥接后） |
+| 窗口占用格 | **4927**（2D 扫描为 1079；3D 覆盖更全，含墙体沿高度方向的投影） |
+| 3D + PurePursuit 2m | `success=true, 10.85s, 1.90m` |
+| 3D + DWA，箱子挡在 2m、目标 4m | `success=true, 23.17s, 4.07m`（绕行） |
+| 启动方式 | `ros2 launch pnc_nav_bringup gz_sim_3d_lidar_bringup.launch.py` |
+
 ## 3. 参数（`local_costmap.*`）
 
 | 参数 | 默认 | 单位 | 说明 / 调参建议 |
@@ -80,6 +111,10 @@
 | `cost_scaling_factor` | 3.0 | — | 衰减系数，越大衰减越快（代价越"尖"） |
 | `include_static` | true | — | 是否叠加静态图障碍（激光已能看到大部分墙时影响很小） |
 | `unknown_as_occupied` | false | — | 窗口外是否当障碍。局部规划建议 false（否则边界会"撞鬼"） |
+| `cloud_topic` | "" | — | 点云话题；填 `points` 启用 3D 点云障碍层（与 scan 二选一） |
+| `cloud_stride` | 8 | — | 每 N 个点取一个（降采样） |
+| `cloud_min_z` / `cloud_max_z` | 0.10 / 1.50 | m | 高度带（map 系），滤地面与高处结构 |
+| `cloud_max_range` | 8.0 | m | 点云水平距离上限 |
 
 ---
 
@@ -141,7 +176,8 @@ ros2 topic hz /costmap          # 期望 ~2Hz
 | 滚动窗口 + 全局/局部双图 | ✅ 已对齐（双图） |
 | 多机器人命名空间 | 无 |
 
-真正要补的顺序：**voxel 层（3D 激光）→ 图层插件化 → 多机器人命名空间**。
+真正要补的顺序：**真 3D 表示（OctoMap/高程图）→ 图层插件化 → 多机器人命名空间**。
+（`voxel` 的实用子集——点云 2.5D 投影——已经实现，见 §2.1。）
 
 ---
 
@@ -152,3 +188,4 @@ ros2 topic hz /costmap          # 期望 ~2Hz
 | 2026-10-23 | 初版：双代价地图 + 障碍层 + 滚动窗口 + 实测数据 |
 | 2026-10-23 | 全局层改为 `OverlayCostmap`（静态整图 + 窗口障碍），A* 可绕行动态障碍；DWA2D 修复 + 绕障实测 |
 | 2026-10-23 | 新增 raytrace 清除（含超量程光束），障碍消失后 ~0.9s 内清除；补充实测数据 |
+| 2026-10-23 | 新增点云障碍层（3D 激光 2.5D 投影）+ 3D bringup；实测 3D 车可绕障 |
