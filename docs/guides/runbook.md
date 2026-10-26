@@ -263,7 +263,8 @@ sudo apt install -y \
 
 ```bash
 colcon build --symlink-install --packages-select \
-  pnc_nav_interfaces pnc_nav_core pnc_nav_planners pnc_nav_sim pnc_nav_bringup pnc_nav_examples
+  pnc_nav_interfaces pnc_nav_core pnc_nav_planners pnc_nav_sim pnc_nav_bringup \
+  pnc_nav_examples pnc_nav_map
 ```
 
 ---

@@ -137,9 +137,11 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 
 ## 7. 分阶段落地与验收
 
-### 3.1 高程图 + 2.5D 可通行性（1–2 天）
-- 新建 `pnc_nav_map` 包；`/points` → `ElevationMap`（复用 `RollingCostmap` 的点云处理经验）
-- 发布 `TraversabilityMap`（已有 msg 定义）+ `OccupancyGrid`（给 RViz）
+### 3.1 高程图 + 2.5D 可通行性（1–2 天）🟡 进行中
+- ✅ 新建 `pnc_nav_map` 包：`ElevationMap`（z 均值/min/max/count）+ `traversability` 纯函数
+  + 10 个 gtest 用例（平地/15° 坡/超阈值台阶/粗糙度/缺数据/代价映射/导出）
+- ⬜ `/points` → `ElevationMap` 的构建器（TF、降采样、高度带、窗口滚动）
+- ⬜ 节点发布 `TraversabilityMap` + `OccupancyGrid`（RViz 可视化）
 - **验收**：在仿真世界加一块 15° 斜坡与一个 10cm 台阶，RViz 能看到坡度/台阶图；
   `getGroundHeight` 在斜坡上误差 < 0.05m
 
@@ -189,7 +191,7 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 
 ## 10. 第一步任务清单（可直接开工）
 
-1. `pnc_nav_map` 包骨架（CMakeLists/package.xml），`ElevationMap` 数据结构 + 单元测试
+1. ✅ `pnc_nav_map` 包骨架（CMakeLists/package.xml），`ElevationMap` 数据结构 + 单元测试
 2. `/points` → `ElevationMap` 的构建器（TF、降采样、高度带、累积更新）
 3. `Traversability` 纯函数 + 单测（给定合成高程，验证 slope/step/roughness）
 4. `ElevationCostmap` 实现 `CostmapInterface` + 发布 `TraversabilityMap`
@@ -203,3 +205,4 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 | 日期 | 变更 |
 |---|---|
 | 2026-10-23 | 初版设计草案（commit `dcf7568`） |
+| 2026-10-23 | 3.1 第一步完成：`pnc_nav_map` 包 + `ElevationMap` + `traversability` + 10 个 gtest 全绿 |
