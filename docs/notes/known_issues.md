@@ -145,6 +145,27 @@
 | 临时规避 | 调 `cloud_min_z`/`cloud_max_z` 适配场景；或改用 2D 雷达 |
 | 修复方向 | Phase 3：OctoMap / 2.5D 高程图 + `CostmapInterface` 的 `getGroundHeight`/`getTraversability`，A* 走 3D 搜索（`AStar3D` 已就位但未验证） |
 
+### KI-016 3D GPU 激光看不到"运行期 spawn"的模型（之前的 3D 绕障结论已撤回）
+
+| 项 | 内容 |
+|---|---|
+| 现象 | `ros_gz_sim create` 把 0.4m 箱子 spawn 到 (2,0) 后：`gz model --list` 能看到模型、pose 正确，但 `/points` 里该区域只有地面点（z≈-0.31），既没有箱子点，`/obstacle_layer` 也没有对应占用格 |
+| 影响 | 之前"3D + DWA 绕障 23.17s/4.07m"的结论**不可靠**——箱子对 3D 激光不可见，机器人很可能是直接穿过；已从文档撤回 |
+| 对照 | 2D 激光（`nav_scan`）同样的 spawn 能正常看到（`/obstacle_layer` 半径 0.5m 内 217–256 格），2D 的绕障结论仍然有效 |
+| 可能原因 | gz-sim 8 的 `gpu_lidar` 对运行期创建的 static 模型不刷新（渲染侧缓存）；或与 `-s` 无 GUI 的渲染路径有关 |
+| 临时规避 | 验证 3D 障碍时把障碍写进 **world SDF**（或在 spawn 后重启仿真），不要依赖运行期 spawn |
+| 修复方向 | 确认是 gz 行为还是我们的 bridge/传感器配置；必要时改用 `ray`（CPU）传感器或 spawn 后重启仿真 |
+
+### KI-017 开启地形代价（use_elevation_costmap）后 A* 规划失败
+
+| 项 | 内容 |
+|---|---|
+| 现象 | 3D + 高程图 + `use_elevation_costmap:=true`：从 (3.9,0) 到 (0.5,0) 连续 4 次 `AStar2D: no path found after 100001 iterations`；起终点高程可通行性都在 0.94–0.96（非障碍） |
+| 状态 | **开放**，默认 `use_elevation_costmap: false`，不影响现有链路 |
+| 已排除 | 起终点被占（可通行性 0.9+）；窗口未覆盖（覆盖 -0.86..7.14）；静态地图无障碍（同点在 2D 模式下可规划） |
+| 怀疑方向 | ① 高程窗口内 **UNKNOWN 格**（recenter 后未填满）被 A* 的 `allow_unknown=false` 当墙；② overlay 回退逻辑在某些格返回 UNKNOWN；③ A* 的启发式/迭代上限在非均匀代价下提前耗尽 |
+| 下一步 | 给 A* 加"被阻挡格计数/失败原因"日志；或在 overlay 层把窗口内 UNKNOWN 显式回退静态（已在 `OverlayCostmap` 做了，但 `TraversabilityCostmapAdapter::isInBounds` 仍为 true，需复查） |
+
 ---
 
 ## 已修复（留档）
@@ -185,3 +206,4 @@ void AStar2D::cleanup() {
 | 2026-10-23 | 局部代价地图增加 raytrace 清除（含超量程光束）：障碍消失 ~0.9s 内清除，不再等 TTL |
 | 2026-10-23 | KI-012 修复：恢复旋转前做碰撞检查（半径可配），贴身时跳过旋转快速失败 |
 | 2026-10-23 | 新增点云障碍层（3D 激光 2.5D 投影）与 3D bringup；新增 KI-015（非真 3D 规划） |
+| 2026-10-23 | 新增 KI-016（3D 激光看不到运行期 spawn 的模型，撤回 3D 绕障结论）、KI-017（地形代价开启后 A* 规划失败） |

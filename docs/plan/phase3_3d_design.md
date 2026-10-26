@@ -147,9 +147,13 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
   补洞后 6400/6400 格全部有数据；机器人移动后窗口原点从 (-4.00,-4.00) 滚到 (-2.90,-4.04)
 - **仍待验收**：15° 斜坡 / 10cm 台阶场景、`getGroundHeight` 误差 < 0.05m
 
-### 3.2 地形代价接入规划（1 天）
-- `ElevationCostmap` 实现 `CostmapInterface`，`AStar3D` 用 `use_3d: true` 规划
-- **验收**：给定"平地直行 vs 绕开陡坡"两条路，规划选择缓坡路线；路径点 z 跟随高程
+### 3.2 地形代价接入规划（1 天）🟡 接线完成，验收受阻
+- ✅ `TraversabilityCostmapAdapter`（core，订阅 `/traversability_map`）+ `OverlayCostmap(静态, 地形)`
+  + NavServer 参数 `use_elevation_costmap`（默认 false）
+- ✅ `gz_sim_3d_lidar_bringup.launch.py` 新增 `use_elevation:=true`（同时起高程节点）
+- ❌ **验收未通过**：开启后 A* 从 (3.9,0)→(0.5,0) 连续规划失败（见 `known_issues.md` KI-017）；
+  另外运行期 spawn 的障碍对 3D 激光不可见（KI-016），需要先用 world 内静态障碍重建验证场景
+- 备注：仍用 `AStar2D` + 2.5D 代价（对地面机器人足够）；`use_3d: true` 的真 3D 搜索留到多层场景
 
 ### 3.3 局部地形代价（1 天）
 - `RollingCostmap` 叠加地形代价（不可通行区域直接 LETHAL）
@@ -209,3 +213,4 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 | 2026-10-23 | 初版设计草案（commit `dcf7568`） |
 | 2026-10-23 | 3.1 第一步完成：`pnc_nav_map` 包 + `ElevationMap` + `traversability` + 10 个 gtest 全绿 |
 | 2026-10-23 | 3.1 主体完成：ElevationBuilder（含 fillUnknown 补洞）+ ElevationCostmap + 节点双话题；15 个 gtest 全绿 |
+| 2026-10-23 | 3.2 接线完成：TraversabilityCostmapAdapter + OverlayCostmap + launch 开关；验收受阻（KI-016/KI-017） |

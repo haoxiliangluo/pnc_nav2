@@ -35,6 +35,7 @@ add_library(nav_server SHARED
   src/nav_server.cpp
   src/nav2_costmap_adapter.cpp
   src/rolling_costmap.cpp
+  src/traversability_costmap_adapter.cpp
 )
 target_include_directories(nav_server PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

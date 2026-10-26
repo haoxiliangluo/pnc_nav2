@@ -98,6 +98,9 @@ NavServer::NavServer(const rclcpp::NodeOptions & options)
   declare_parameter("progress_timeout", 8.0);
   declare_parameter("progress_epsilon", 0.05);
   declare_parameter("tf_timeout_ticks", 50);
+  declare_parameter("use_elevation_costmap", false);
+  declare_parameter("elevation_topic", "traversability_map");
+  declare_parameter("elevation_lethal_score", 0.3);
   declare_parameter("recovery_collision_check", true);
   declare_parameter("recovery_safety_radius", 0.35);
 
@@ -115,6 +118,9 @@ NavServer::NavServer(const rclcpp::NodeOptions & options)
   progress_timeout_ = get_parameter("progress_timeout").as_double();
   progress_epsilon_ = get_parameter("progress_epsilon").as_double();
   tf_timeout_ticks_ = get_parameter("tf_timeout_ticks").as_int();
+  use_elevation_costmap_ = get_parameter("use_elevation_costmap").as_bool();
+  elevation_topic_ = get_parameter("elevation_topic").as_string();
+  elevation_lethal_score_ = get_parameter("elevation_lethal_score").as_double();
   recovery_collision_check_ = get_parameter("recovery_collision_check").as_bool();
   recovery_safety_radius_ = get_parameter("recovery_safety_radius").as_double();
 
@@ -140,9 +146,18 @@ void NavServer::initialize()
   static_costmap_ = std::make_shared<Nav2CostmapAdapter>(shared_from_this());
   local_costmap_ = std::make_shared<RollingCostmap>(
     shared_from_this(), tf_buffer_, static_costmap_);
-  // 全局规划器也用"窗口叠加"视图：A* 能看到窗口内的动态障碍（重规划可绕行），
+  // 全局规划器也用"窗口叠加"视图：A* 能看到窗口内的动态障碍/地形代价（重规划可绕行），
   // 但搜索范围仍是整张静态地图。
-  global_costmap_ = std::make_shared<OverlayCostmap>(static_costmap_, local_costmap_);
+  if (use_elevation_costmap_) {
+    traversability_costmap_ = std::make_shared<TraversabilityCostmapAdapter>(
+      shared_from_this(), elevation_topic_, elevation_lethal_score_);
+    global_costmap_ = std::make_shared<OverlayCostmap>(static_costmap_, traversability_costmap_);
+    RCLCPP_INFO(
+      get_logger(), "Global costmap: static + elevation(%s, lethal_score=%.2f)",
+      elevation_topic_.c_str(), elevation_lethal_score_);
+  } else {
+    global_costmap_ = std::make_shared<OverlayCostmap>(static_costmap_, local_costmap_);
+  }
 
   // 发布者
   global_plan_pub_ = create_publisher<nav_msgs::msg::Path>("global_plan", 10);

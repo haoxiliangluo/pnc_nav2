@@ -93,7 +93,7 @@
 | `/points` 频率 | ~4.4Hz（gz 桥接后） |
 | 窗口占用格 | **4927**（2D 扫描为 1079；3D 覆盖更全，含墙体沿高度方向的投影） |
 | 3D + PurePursuit 2m | `success=true, 10.85s, 1.90m` |
-| 3D + DWA，箱子挡在 2m、目标 4m | `success=true, 23.17s, 4.07m`（绕行） |
+| 3D + DWA，箱子挡在 2m、目标 4m | ⚠️ **结论撤回**：运行期 spawn 的箱子对 3D 激光不可见（见 `known_issues.md` KI-016），该用例无法证明绕障 |
 | 启动方式 | `ros2 launch pnc_nav_bringup gz_sim_3d_lidar_bringup.launch.py` |
 
 ## 3. 参数（`local_costmap.*`）

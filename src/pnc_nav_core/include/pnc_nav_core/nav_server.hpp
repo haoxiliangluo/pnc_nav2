@@ -26,6 +26,7 @@
 #include "pnc_nav_core/local_planner_base.hpp"
 #include "pnc_nav_core/path_tracker_base.hpp"
 #include "pnc_nav_core/costmap_interface.hpp"
+#include "pnc_nav_core/traversability_costmap_adapter.hpp"
 
 namespace pnc_nav_core
 {
@@ -133,6 +134,7 @@ private:
   std::shared_ptr<Nav2CostmapAdapter> static_costmap_;// 全局：静态 /map（给全局规划器）
   std::shared_ptr<RollingCostmap> local_costmap_;// 局部：滚动窗口 + 障碍层（给局部规划器）
   std::shared_ptr<OverlayCostmap> global_costmap_;// 全局：静态整图 + 窗口障碍叠加（给全局规划器）
+  std::shared_ptr<TraversabilityCostmapAdapter> traversability_costmap_;// 可选：地形可通行性图层
   void updateLocalCostmap();// 每周期：滚动窗口 + 激光障碍更新
 
   // --- 控制循环 ---
@@ -222,6 +224,9 @@ private:
   double progress_timeout_{8.0};// 卡住判定：多久没有位移算卡住 (s)，<=0 关闭
   double progress_epsilon_{0.05};// 卡住判定：位移阈值 (m)
   int tf_timeout_ticks_{50};// 连续 TF 失败多少周期后判失败
+  bool use_elevation_costmap_{false};// 全局规划是否叠加坡度/台阶等地形代价
+  std::string elevation_topic_{"traversability_map"};
+  double elevation_lethal_score_{0.3};
   bool recovery_collision_check_{true};// 恢复旋转前是否做碰撞检查
   double recovery_safety_radius_{0.35};// 旋转安全检查半径 (m)，应 >= robot_radius
 };

@@ -32,15 +32,22 @@ public:
 
   uint8_t getCost(double x, double y, double z) const override
   {
+    // 窗口内如果有数据就用窗口（含动态/地形障碍），否则回退静态层：
+    // 这样高程图/点云还没收到数据时不会让全局规划"看不见地图"。
     if (overlay_ && overlay_->isInBounds(x, y, z)) {
-      return overlay_->getCost(x, y, z);
+      const uint8_t cost = overlay_->getCost(x, y, z);
+      if (cost != cost_values::UNKNOWN) {
+        return cost;
+      }
     }
     return base_ ? base_->getCost(x, y, z) : cost_values::UNKNOWN;
   }
 
   bool isOccupied(double x, double y, double z) const override
   {
-    if (overlay_ && overlay_->isInBounds(x, y, z)) {
+    if (overlay_ && overlay_->isInBounds(x, y, z) &&
+      overlay_->getCost(x, y, z) != cost_values::UNKNOWN)
+    {
       return overlay_->isOccupied(x, y, z);
     }
     return base_ ? base_->isOccupied(x, y, z) : true;

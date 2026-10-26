@@ -22,6 +22,7 @@ def generate_launch_description():
     map_yaml = LaunchConfiguration('map')
     use_gui = LaunchConfiguration('use_gui')
     cloud_topic = LaunchConfiguration('cloud_topic')
+    use_elevation = LaunchConfiguration('use_elevation')
 
     default_params = PathJoinSubstitution([
         FindPackageShare('pnc_nav_bringup'), 'config', 'nav_params.yaml'
@@ -38,6 +39,8 @@ def generate_launch_description():
         DeclareLaunchArgument('use_gui', default_value='true'),
         DeclareLaunchArgument('cloud_topic', default_value='points',
                               description='3D 点云话题（填 "" 可关闭点云障碍层）'),
+        DeclareLaunchArgument('use_elevation', default_value='false',
+                              description='true = 启动高程图节点，并让全局规划叠加坡度/台阶代价'),
         DeclareLaunchArgument('x_pose', default_value='0.0'),
         DeclareLaunchArgument('y_pose', default_value='0.0'),
         DeclareLaunchArgument('z_pose', default_value='0.15'),
@@ -81,6 +84,14 @@ def generate_launch_description():
             parameters=[{'use_sim_time': use_sim_time}],
         ),
 
+        # 可选：高程图节点（/points → /traversability_map）
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution([
+                FindPackageShare('pnc_nav_map'), 'launch', 'elevation_map.launch.py'
+            ])),
+            condition=IfCondition(use_elevation),
+        ),
+
         Node(
             package='pnc_nav_core', executable='nav_server_node', name='nav_server',
             output='screen',
@@ -88,6 +99,7 @@ def generate_launch_description():
                 nav_params_file,
                 {'use_sim_time': use_sim_time},
                 {'local_costmap.cloud_topic': cloud_topic},
+                {'use_elevation_costmap': use_elevation},
             ],
         ),
 

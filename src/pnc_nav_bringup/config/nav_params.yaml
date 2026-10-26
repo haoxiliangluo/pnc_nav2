@@ -11,6 +11,11 @@ nav_server:
     goal_tolerance_angle: 0.0        # 终点朝向容差 (rad)；0 = 只看距离，不要求朝向
     max_planning_retries: 3
 
+    # --- 地形代价（Phase 3；需要 elevation_map_node 发布 /traversability_map）---
+    use_elevation_costmap: false     # true = 全局规划叠加高程图的可通行性代价
+    elevation_topic: "traversability_map"
+    elevation_lethal_score: 0.3      # 可通行性低于它视为不可通行
+
     # --- 恢复行为 / feedback / 看门狗 ---
     recovery_spin_duration: 1.0     # 恢复时原地旋转时长 (s)
     recovery_angular_vel: 0.6       # 恢复时旋转角速度 (rad/s)
