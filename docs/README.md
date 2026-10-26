@@ -66,7 +66,7 @@ ros2 action send_goal /navigate_to_3d_pose pnc_nav_interfaces/action/NavigateTo3
 | [notes/vs_nav2.md](notes/vs_nav2.md) | 和 Nav2 的取舍对照（面试高频） | ✅ |
 | [notes/decisions.md](notes/decisions.md) | 每个关键决策的理由与代价 | ✅ |
 | [notes/known_issues.md](notes/known_issues.md) | 已知缺陷与下一步 | ✅ |
-| `plan/phase3_3d_design.md` | 3D 链路（OctoMap / 高程图 / Traversability）怎么落地 | 🚧 |
+| [plan/phase3_3d_design.md](plan/phase3_3d_design.md) | 3D 链路（高程图 / Traversability / AStar3D）怎么落地 | ✅ 设计草案 |
 
 ---
 
