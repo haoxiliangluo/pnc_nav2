@@ -130,6 +130,9 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 
 验证：`ros2 topic echo /traversability_map --once`；RViz 用 Map 显示 `/elevation_map`（0=可通行，100=不可通行）。
 
+开启地形代价：3D bringup 加 `use_elevation:=true`（同时起高程节点）。此时**全局与局部**规划器的代价地图
+都会叠加地形层；关掉则行为与 Phase 2 完全一致。
+
 ### 3.3 `global_planner.*`（A* 系列）
 
 | 参数 | 代码默认 | yaml 现值 | 说明 |

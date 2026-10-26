@@ -162,9 +162,12 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
   坡度估计噪声（KI-018）
 - 备注：仍用 `AStar2D` + 2.5D 代价（对地面机器人足够）；`use_3d: true` 的真 3D 搜索留到多层场景
 
-### 3.3 局部地形代价（1 天）
-- `RollingCostmap` 叠加地形代价（不可通行区域直接 LETHAL）
-- **验收**：DWA 在斜坡边缘不再"贴边"，台阶前会绕行或停下
+### 3.3 局部地形代价（1 天）🟡 已接线，坡道行为待验证
+- ✅ 开启 `use_elevation_costmap` 时，局部规划器的代价地图 =
+  `OverlayCostmap(RollingCostmap, 地形)`（局部窗口优先、缺数据回退激光层）
+- 实测（平地）：DWA 目标 2m → 9.7s / 1.86m；回程 0.2m → 11.5s / 1.54m
+- ⬜ 坡道场景未验证：坡顶可通行性被估到 0.04（KI-018），DWA 会当成障碍 → 可能拒绝爬坡，
+  需要先改善坡度估计或把 `elevation_lethal_score` 调低（0.2）
 
 ### 3.4 定位接口预留（0.5 天，不实现算法）
 - 文档写明 `map→odom` 由 AMCL / LIO-SAM / Cartographer 提供，NavServer 只查 TF
@@ -222,3 +225,4 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 | 2026-10-23 | 3.1 主体完成：ElevationBuilder（含 fillUnknown 补洞）+ ElevationCostmap + 节点双话题；15 个 gtest 全绿 |
 | 2026-10-23 | 3.2 接线完成：TraversabilityCostmapAdapter + OverlayCostmap + launch 开关；验收受阻（KI-016/KI-017） |
 | 2026-10-23 | KI-017 修复；新增 slope_test 世界与 world 参数；记录 KI-018（坡度噪声） |
+| 2026-10-23 | 3.3 接线：局部规划器叠加地形代价（平地实测通过，坡道待验证） |

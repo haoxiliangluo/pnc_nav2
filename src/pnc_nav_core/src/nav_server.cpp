@@ -152,11 +152,14 @@ void NavServer::initialize()
     traversability_costmap_ = std::make_shared<TraversabilityCostmapAdapter>(
       shared_from_this(), elevation_topic_, elevation_lethal_score_);
     global_costmap_ = std::make_shared<OverlayCostmap>(static_costmap_, traversability_costmap_);
+    // 局部规划器同样能看到地形（坡度/台阶）：局部窗口优先，缺数据回退激光层
+    local_planner_costmap_ = std::make_shared<OverlayCostmap>(local_costmap_, traversability_costmap_);
     RCLCPP_INFO(
       get_logger(), "Global costmap: static + elevation(%s, lethal_score=%.2f)",
       elevation_topic_.c_str(), elevation_lethal_score_);
   } else {
     global_costmap_ = std::make_shared<OverlayCostmap>(static_costmap_, local_costmap_);
+    local_planner_costmap_ = local_costmap_;
   }
 
   // 发布者
@@ -223,7 +226,7 @@ void NavServer::loadPlugins()
   if (!local_plugin_name.empty()) {
     try {
       local_planner_ = local_planner_loader_.createSharedInstance(local_plugin_name);
-      local_planner_->configure(shared_from_this(), "local_planner", local_costmap_);
+      local_planner_->configure(shared_from_this(), "local_planner", local_planner_costmap_);
       local_planner_->activate();
       RCLCPP_INFO(get_logger(), "Loaded local planner: %s", local_plugin_name.c_str());
       return;
@@ -277,7 +280,7 @@ bool NavServer::switchLocalPlanner(const std::string & plugin_name)
       local_planner_->cleanup();
     }
     local_planner_ = local_planner_loader_.createSharedInstance(plugin_name);
-    local_planner_->configure(shared_from_this(), "local_planner", local_costmap_);
+    local_planner_->configure(shared_from_this(), "local_planner", local_planner_costmap_);
     local_planner_->activate();
     path_tracker_.reset();
     RCLCPP_INFO(get_logger(), "Switched local planner to: %s", plugin_name.c_str());

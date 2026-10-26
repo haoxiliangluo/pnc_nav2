@@ -135,6 +135,7 @@ private:
   std::shared_ptr<RollingCostmap> local_costmap_;// 局部：滚动窗口 + 障碍层（给局部规划器）
   std::shared_ptr<OverlayCostmap> global_costmap_;// 全局：静态整图 + 窗口障碍叠加（给全局规划器）
   std::shared_ptr<TraversabilityCostmapAdapter> traversability_costmap_;// 可选：地形可通行性图层
+  CostmapInterface::SharedPtr local_planner_costmap_;// 给局部规划器的代价地图（可能叠地形）
   void updateLocalCostmap();// 每周期：滚动窗口 + 激光障碍更新
 
   // --- 控制循环 ---
