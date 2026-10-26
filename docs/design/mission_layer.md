@@ -116,7 +116,7 @@ ros2 topic echo /mission_status
 | 无中途插队 | 不支持运行中追加点位（需要 start 重启任务） |
 | 无 checkpoint | 进程重启后任务丢失（MoveXBot 的 `task_checkpoint` 是参考） |
 | 无"跳过失败点"策略 | 目前失败即整体失败 |
-| 短距离折返疑似异常 | 见 `known_issues.md` KI-020（任务层无错，导航跟踪层待查） |
+| 折返段偏慢 | KI-020 修复后能走完，但 180° 折返要 50s（原地转 + 走走正正），后续可优化预判 |
 
 下一步优先级：**插队/跳过策略 → checkpoint → 行为树化（如果出现 3 种以上恢复策略）**。
 
@@ -125,3 +125,4 @@ ros2 topic echo /mission_status
 | 日期 | 变更 |
 |---|---|
 | 2026-10-23 | 初版：MissionRunner 纯逻辑 + mission_executor_node + 7 个单测；/nav_status 外发 |
+| 2026-10-23 | 三点任务（含折返）实测通过：SUCCEEDED 3/3（KI-020 修复） |

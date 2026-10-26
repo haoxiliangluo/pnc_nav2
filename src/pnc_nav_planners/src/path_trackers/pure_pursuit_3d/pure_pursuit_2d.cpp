@@ -25,8 +25,9 @@ namespace pnc_nav_planners
         node_->declare_parameter(name_ + ".max_linear_vel", 0.5);
         node_->declare_parameter(name_ + ".max_angular_vel", 1.0);
         node_->declare_parameter(name_ + ".min_linear_vel", 0.05);
-        if (!node_->has_parameter("debug")) {
-            node_->declare_parameter("debug", false);
+        // 插件参数一律挂在 <实例名>. 下（KI-009）
+        if (!node_->has_parameter(name_ + ".debug")) {
+            node_->declare_parameter(name_ + ".debug", false);
         }
 
         lookahead_distance_ = node_->get_parameter(name_ + ".lookahead_distance").as_double();
@@ -92,18 +93,31 @@ namespace pnc_nav_planners
     const geometry_msgs::msg::PoseStamped & current_pose,
     double lookahead_dist)
     {
+        auto dist_to = [&](size_t i) {
+              const auto & p = path_.poses[i].pose.position;
+              return std::hypot(
+                p.x - current_pose.pose.position.x,
+                p.y - current_pose.pose.position.y);
+            };
+
+        // 单调推进索引：下一个点比当前点更近 → 说明机器人已经越过当前点。
+        // 不加这一步，短距离折返时索引会停在路径起点/终点，机器人会追着身后的点跑（KI-020）。
+        while (current_waypoint_idx_ + 1 < path_.poses.size() &&
+          dist_to(current_waypoint_idx_ + 1) <= dist_to(current_waypoint_idx_))
+        {
+            ++current_waypoint_idx_;
+        }
+
         for(size_t i = current_waypoint_idx_; i < path_.poses.size();i++)
         {
-            double dx = path_.poses[i].pose.position.x - current_pose.pose.position.x;
-            double dy = path_.poses[i].pose.position.y - current_pose.pose.position.y;
-            double dist = std::hypot(dx, dy);
-            if(dist >= lookahead_dist)
+            if(dist_to(i) >= lookahead_dist)
             {
                 current_waypoint_idx_ = i;
                 return path_.poses[i];
             }
         }
-        RCLCPP_WARN(node_->get_logger(), "No lookahead point found");
+        // 机器人已经越过整条路径（或路径比前视距离短）：用最后一个点
+        current_waypoint_idx_ = path_.poses.size() - 1;
         return path_.poses.back();
     }
 // 计算速度指令
@@ -118,6 +132,19 @@ namespace pnc_nav_planners
         geometry_msgs::msg::TwistStamped cmd;
         cmd.header.stamp = node_->now();
         cmd.header.frame_id = current_pose.header.frame_id;
+
+        // 大角度偏差（含反向）：先原地转，不要用曲率公式——
+        // 前视点在正后方时 sin(heading_error)≈0，会算出"曲率 0"然后直着开走（KI-020 根因）。
+        if (std::abs(heading_error_) > 2.0) {
+            cmd.twist.linear.x = 0.0;
+            cmd.twist.angular.z = (heading_error_ > 0.0 ? 1.0 : -1.0) * max_angular_vel_;
+            if (node_->get_parameter(name_ + ".debug").as_bool()) {
+                RCLCPP_INFO(
+                    node_->get_logger(), "PurePursuit2D: rotate in place (heading_error=%.2f rad)",
+                    heading_error_);
+            }
+            return cmd;
+        }
         double  target_speed = max_linear_vel_ / (1.0 + std::abs(curvature) * 2.0); // 根据曲率调整速度
         double dist_to_goal = std::hypot(path_.poses.back().pose.position.x - current_pose.pose.position.x,
                                      path_.poses.back().pose.position.y - current_pose.pose.position.y);
@@ -127,7 +154,7 @@ namespace pnc_nav_planners
         }
         cmd.twist.linear.x = std::clamp(target_speed, min_linear_vel_, max_linear_vel_);
         cmd.twist.angular.z = std::clamp(curvature * cmd.twist.linear.x, -max_angular_vel_, max_angular_vel_);
-        if(node_->get_parameter("debug").as_bool())
+        if(node_->get_parameter(name_ + ".debug").as_bool())
         {
             RCLCPP_INFO(node_->get_logger(), "Current Waypoint Index: %zu, Lookahead Point: (%.2f, %.2f), Curvature: %.4f, Cross Track Error: %.4f, Heading Error: %.4f",
                         current_waypoint_idx_, lookahead_point.pose.position.x, lookahead_point.pose.position.y,
