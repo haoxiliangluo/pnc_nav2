@@ -21,6 +21,8 @@
 | `pnc_nav_control` | locomotion 接口 / RL / MPC 步态 | ❌ 不存在 | 只有 `controller_base.hpp`（`LocomotionControllerBase`），无实现、未接入 NavServer |
 | （未在架构图中）`pnc_nav_rviz` | — | ✅ 存在 | 自绘 RViz 面板（移动控制 + 初始位姿 + Cartographer write_state） |
 | （未在架构图中）`pnc_nav_examples` | — | ✅ 新增 | 教学示例插件 `StraightLinePlanner`（commit `ed5280c`） |
+| （未在架构图中）`pnc_nav_map` | — | 🟡 新增 | 2.5D 高程图 + 可通行性 + 高程节点（Phase 3.1） |
+| （未在架构图中）`pnc_nav_diagnostics` | — | ✅ 新增 | 健康监控（`/diagnostics`：map/odom/sensor/tf/action） |
 
 **`third_party/`**：实际只有 `cartographer`、`cartographer_ros`、`turtlebot3*`、`simdog_go2`（submodule，指向作者本地路径，克隆后为空）。
 架构图里写的 `octomap/`、`grid_map/`、`unitree_ros2/` **不存在**。

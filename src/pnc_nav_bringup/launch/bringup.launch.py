@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+"""PNC Nav2 统一启动入口（profile 化）。
+
+用法：
+  ros2 launch pnc_nav_bringup bringup.launch.py profile:=sim2d
+profile:
+  sim2d            2D 差速车 + maps/111（Phase 1/2 全链路）
+  sim3d            3D 激光车（点云障碍层）
+  sim3d_elevation  3D 激光车 + 高程图地形代价（Phase 3）
+  real             真机：只起 map_server + nav_server，TF/odom/scan 由外部提供
+"""
+
+from launch import LaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction, LogInfo,
+)
+from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+
+
+PROFILES = {
+    'sim2d':            {'kind': 'sim2d', 'scan': 'nav_scan', 'cloud': '',       'elevation': 'false'},
+    'sim3d':            {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'false'},
+    'sim3d_elevation':  {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'true'},
+    'real':             {'kind': 'real',  'scan': 'scan',     'cloud': '',       'elevation': 'false'},
+}
+
+
+def _launch_setup(context, *args, **kwargs):
+    profile_name = LaunchConfiguration('profile').perform(context)
+    if profile_name not in PROFILES:
+        raise RuntimeError(
+            f"unknown profile '{profile_name}', available: {list(PROFILES)}")
+    profile = PROFILES[profile_name]
+
+    use_gui = LaunchConfiguration('use_gui')
+    use_rviz = LaunchConfiguration('use_rviz')
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    params_file = LaunchConfiguration('params_file')
+    map_yaml = LaunchConfiguration('map')
+
+    actions = [LogInfo(msg=f"[pnc_nav] bringup profile = {profile_name}")]
+
+    if profile['kind'] == 'sim2d':
+        actions.append(IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution([
+                FindPackageShare('pnc_nav_bringup'), 'launch', 'gz_sim_2d_bringup.launch.py'])),
+            launch_arguments={
+                'use_sim_time': use_sim_time,
+                'use_gui': use_gui,
+                'use_rviz': use_rviz,
+                'params_file': params_file,
+                'map': map_yaml,
+            }.items(),
+        ))
+    elif profile['kind'] == 'sim3d':
+        actions.append(IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution([
+                FindPackageShare('pnc_nav_bringup'), 'launch',
+                'gz_sim_3d_lidar_bringup.launch.py'])),
+            launch_arguments={
+                'use_sim_time': use_sim_time,
+                'use_gui': use_gui,
+                'use_rviz': use_rviz,
+                'params_file': params_file,
+                'map': map_yaml,
+                'use_elevation': profile['elevation'],
+            }.items(),
+        ))
+    else:  # real：只起地图与导航服务，TF/odom/scan 由外部提供
+        actions.append(Node(
+            package='nav2_map_server', executable='map_server', name='map_server',
+            output='screen',
+            parameters=[{'yaml_filename': map_yaml}, {'use_sim_time': use_sim_time}],
+        ))
+        actions.append(Node(
+            package='nav2_lifecycle_manager', executable='lifecycle_manager',
+            name='lifecycle_manager_map', output='screen',
+            parameters=[
+                {'autostart': True}, {'node_names': ['map_server']},
+                {'use_sim_time': use_sim_time}, {'bond_timeout': 4.0},
+                {'attempt_respawn_reconnection': True},
+                {'bond_respawn_max_duration': 10.0},
+            ],
+        ))
+        actions.append(Node(
+            package='pnc_nav_core', executable='nav_server_node', name='nav_server',
+            output='screen',
+            parameters=[params_file, {'use_sim_time': use_sim_time}],
+        ))
+
+    # 健康监控：每个 profile 都在跑（scan/cloud 话题按 profile 区分）
+    actions.append(Node(
+        package='pnc_nav_diagnostics', executable='health_monitor_node',
+        name='health_monitor', output='screen',
+        parameters=[
+            {'use_sim_time': use_sim_time},
+            {'health.period': 2.0},
+            {'health.scan_topic': profile['scan']},
+            {'health.cloud_topic': profile['cloud']},
+        ],
+    ))
+    return actions
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        DeclareLaunchArgument('profile', default_value='sim2d',
+                              description='sim2d | sim3d | sim3d_elevation | real'),
+        DeclareLaunchArgument('use_sim_time', default_value='true'),
+        DeclareLaunchArgument('use_gui', default_value='true'),
+        DeclareLaunchArgument('use_rviz', default_value='true'),
+        DeclareLaunchArgument(
+            'params_file',
+            default_value=PathJoinSubstitution([
+                FindPackageShare('pnc_nav_bringup'), 'config', 'nav_params.yaml'])),
+        DeclareLaunchArgument(
+            'map',
+            default_value=PathJoinSubstitution([
+                FindPackageShare('pnc_nav_bringup'), 'maps', '111', '111.yaml'])),
+        OpaqueFunction(function=_launch_setup),
+    ])

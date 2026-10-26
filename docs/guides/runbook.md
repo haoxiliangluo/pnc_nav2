@@ -22,6 +22,7 @@
 
 | 入口 | 起什么 | 状态 |
 |---|---|---|
+| **`bringup.launch.py profile:=sim2d\|sim3d\|sim3d_elevation\|real`** | **统一入口**：按 profile 组合仿真/地图/导航/健康监控 | ✅ 推荐 |
 | `pnc_nav_bringup/gz_sim_2d_bringup.launch.py` | **主入口**：Gazebo playground + 差速车 + `maps/111` + map_server + nav_server + RViz | ✅ 可用 |
 | `pnc_nav_bringup/sim_2d_bringup.launch.py` | 旧入口名，转发到 `gz_sim_2d_bringup` | ✅ 兼容 |
 | `pnc_nav_bringup/turtlebot3_test.launch.py` | 旧入口名，同上 | ✅ 兼容 |
@@ -33,6 +34,22 @@
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/sim_3d_bringup.launch.py` | 名义上的 Go2 3D 启动 | ❌ **不可用**：include 外部包 `go2_config` / `lio_sam`，本仓库不含 |
 | `./start_nav.sh` | 一键：2D 主入口 + 域隔离 | ✅ 可用 |
+
+### 2.0 统一入口的 profile
+
+| profile | 内容 | 适用 |
+|---|---|---|
+| `sim2d` | 2D 差速车 + maps/111 + nav_server + health_monitor（scan=nav_scan） | 日常开发、回归 |
+| `sim3d` | 3D 激光车（点云障碍层，cloud=points） | 3D 感知/避障 |
+| `sim3d_elevation` | 3D + 高程图地形代价（Phase 3） | 地形相关 |
+| `real` | 只起 map_server + nav_server + health_monitor，TF/odom/scan 由外部提供 | 真机接入 |
+
+```bash
+ros2 launch pnc_nav_bringup bringup.launch.py profile:=sim2d use_gui:=false use_rviz:=false
+ros2 launch pnc_nav_bringup bringup.launch.py profile:=sim3d_elevation params_file:=/tmp/my.yaml
+```
+
+> 旧的 `gz_sim_2d_bringup.launch.py` / `gz_sim_3d_lidar_bringup.launch.py` 仍然可用（统一入口只是组合它们）。
 
 ### 2.1 主入口的 launch 参数
 
@@ -113,6 +130,19 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `cloud_stride` / `cloud_min_z` / `cloud_max_z` / `cloud_max_range` | 8 / 0.10 / 1.50 / 8.0 | 点云降采样与高度带过滤 |
 
 调试：`python3 test/check_costmap_layers.py` 打印窗口尺寸/原点/占用格数；RViz 看 `/costmap` 与 `/obstacle_layer`。
+
+### 3.2d `health.*`（健康监控）
+
+| 参数 | 现值 | 说明 |
+|---|---|---|
+| `period` | 2.0 | 检查周期 (s) |
+| `odom_timeout` / `scan_timeout` | 2.0 / 3.0 | 数据超时 (s) |
+| `scan_topic` / `cloud_topic` | 由 profile 决定 | 期望存在的传感器话题（留空跳过检查） |
+| `require_map` | true | 是否要求 `/map` 已收到 |
+| `map_frame` / `base_frame` | map / base_link | TF 检查的坐标系 |
+| `check_action_server` | true | 是否检查 `navigate_to_3d_pose` 是否存在 |
+
+输出：标准 `/diagnostics`（`pnc_nav/map|odom|sensor|tf|navigate_to_3d_pose`），状态变化时打日志。
 
 ### 3.2c `elevation.*`（2.5D 高程图节点）
 
@@ -298,3 +328,4 @@ colcon build --symlink-install --packages-select \
 | 2026-10-23 | 新增 `local_costmap.*` 参数表、障碍层调试与动态障碍实验配方 |
 | 2026-10-23 | 新增点云障碍层参数、3D 激光 bringup 入口 |
 | 2026-10-23 | 新增高程图节点入口与 `elevation.*` 参数表 |
+| 2026-10-23 | 新增统一入口 `bringup.launch.py`（profile 化）与 health_monitor |

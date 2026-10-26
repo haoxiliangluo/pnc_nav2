@@ -105,7 +105,10 @@ docker run -dit --name pnc_nav --restart unless-stopped --privileged --net=host 
 ### 运行 2D 导航测试（阶段1）
 
 ```bash
-# 推荐入口：Gazebo Harmonic playground + maps/111 + NavServer + RViz
+# 推荐入口（profile 化）：sim2d | sim3d | sim3d_elevation | real
+ros2 launch pnc_nav_bringup bringup.launch.py profile:=sim2d
+
+# 等价旧入口：Gazebo Harmonic playground + maps/111 + NavServer + RViz
 ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py
 
 # 或一键脚本

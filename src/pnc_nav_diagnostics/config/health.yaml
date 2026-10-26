@@ -1,0 +1,14 @@
+health_monitor:
+  ros__parameters:
+    use_sim_time: true
+    health:
+      # 检查周期 (s) 与各项超时 (s)
+      period: 2.0
+      odom_timeout: 2.0
+      scan_timeout: 3.0
+      map_timeout: 10.0
+      tf_timeout: 2.0
+      check_action_server: true
+      # 期望存在的传感器话题（留空表示不检查）
+      scan_topic: ""          # 2D 车填 nav_scan；3D 车可填 points
+      require_map: true
