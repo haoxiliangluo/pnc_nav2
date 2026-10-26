@@ -42,6 +42,8 @@ RollingCostmap::RollingCostmap(
     "local_costmap.unknown_as_occupied", unknown_as_occupied_);
   const std::string scan_topic = node_->declare_parameter<std::string>(
     "local_costmap.scan_topic", "nav_scan");
+  robot_clear_radius_ = node_->declare_parameter<double>(
+    "local_costmap.robot_clear_radius", robot_clear_radius_);
   cloud_topic_ = node_->declare_parameter<std::string>("local_costmap.cloud_topic", "");
   cloud_stride_ = node_->declare_parameter<int>("local_costmap.cloud_stride", cloud_stride_);
   cloud_min_z_ = node_->declare_parameter<double>("local_costmap.cloud_min_z", cloud_min_z_);
@@ -225,6 +227,13 @@ void RollingCostmap::cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPt
 
     // 高度带过滤：2.5D 投影，滤掉地面点和过高的点
     if (mz < cloud_min_z_ || mz > cloud_max_z_) {
+      continue;
+    }
+
+    // footprint 清除：丢弃机器人自身附近的点
+    if (has_center_ &&
+      std::hypot(mx - last_center_x_, my - last_center_y_) < robot_clear_radius_)
+    {
       continue;
     }
 

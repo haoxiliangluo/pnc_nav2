@@ -286,8 +286,12 @@ nav_msgs::msg::Path AStar2D::createPlan(
     }
     if(costmap_->isOccupied(start.pose.position.x, start.pose.position.y, 0.0))
     {
-      RCLCPP_WARN(node_->get_logger(), "Start is occupied");
-      return empty_path;
+      // 起点被占通常意味着"机器人自己站在了代价较高的格子里"（footprint/传感器噪声），
+      // 不应该直接放弃：打个告警继续搜，邻居格通常还是可通行的（KI-017）。
+      RCLCPP_WARN(
+        node_->get_logger(),
+        "AStar2D: start cell is occupied (cost=%u), trying anyway",
+        costmap_->getCost(start.pose.position.x, start.pose.position.y, 0.0));
     }
     if (!costmap_->isInBounds(goal.pose.position.x, goal.pose.position.y, goal.pose.position.z)) {
     RCLCPP_WARN(node_->get_logger(), "AStar2D: goal out of bounds");
@@ -311,6 +315,8 @@ nav_msgs::msg::Path AStar2D::createPlan(
 
 // 6. while open_set 不空
     int iterations = 0;
+    // 失败诊断计数（KI-017 排查用）：分别统计被各类规则挡掉的邻居扩展
+    int stat_bounds = 0, stat_occupied = 0, stat_unknown = 0, stat_expanded = 0;
     while(!open_set.empty() && iterations <= max_iterations_)
     {
       iterations++;
@@ -323,6 +329,7 @@ nav_msgs::msg::Path AStar2D::createPlan(
       }
       if(closed_set[current])continue;
       closed_set[current] = true;
+      ++stat_expanded;
       for(const auto & neighbor :getNeighbors(current))
       {
         if(closed_set[neighbor])continue;
@@ -330,10 +337,10 @@ nav_msgs::msg::Path AStar2D::createPlan(
         double wx,wy;
         gridToWorld(neighbor,wx,wy);
 
-        if(!costmap_->isInBounds(wx, wy, 0.0))continue;
-        if(costmap_->isOccupied(wx, wy, 0.0))continue;
-        if (!allow_unknown_ && costmap_->getCost(wx, wy, 0.0) == pnc_nav_core::cost_values::UNKNOWN) 
-        {continue;
+        if(!costmap_->isInBounds(wx, wy, 0.0)){ ++stat_bounds; continue;}
+        if(costmap_->isOccupied(wx, wy, 0.0)){ ++stat_occupied; continue;}
+        if (!allow_unknown_ && costmap_->getCost(wx, wy, 0.0) == pnc_nav_core::cost_values::UNKNOWN)
+        { ++stat_unknown; continue;
         }        
         double dx = std::abs(neighbor.x - current.x);
         double dy = std::abs(neighbor.y - current.y);
@@ -353,7 +360,18 @@ nav_msgs::msg::Path AStar2D::createPlan(
       }
 
     }
-    RCLCPP_WARN(node_->get_logger(), "AStar2D: no path found after %d iterations", iterations);
+    // 失败诊断（KI-017）：区分"边界外/障碍/未知"三类阻挡，并打印起终点信息
+    RCLCPP_WARN(
+      node_->get_logger(),
+      "AStar2D: no path after %d iters (expanded=%d, blocked: bounds=%d occupied=%d "
+      "unknown=%d); start=(%.2f,%.2f) cost=%u occ=%d; goal=(%.2f,%.2f) cost=%u occ=%d",
+      iterations, stat_expanded, stat_bounds, stat_occupied, stat_unknown,
+      start.pose.position.x, start.pose.position.y,
+      costmap_->getCost(start.pose.position.x, start.pose.position.y, 0.0),
+      costmap_->isOccupied(start.pose.position.x, start.pose.position.y, 0.0),
+      goal.pose.position.x, goal.pose.position.y,
+      costmap_->getCost(goal.pose.position.x, goal.pose.position.y, 0.0),
+      costmap_->isOccupied(goal.pose.position.x, goal.pose.position.y, 0.0));
     return empty_path;
 
 }

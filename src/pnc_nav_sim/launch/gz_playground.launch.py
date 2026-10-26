@@ -36,7 +36,8 @@ def _launch_setup(context, *args, **kwargs):
     bridge_name = LaunchConfiguration('bridge_config').perform(context)
     xacro_path = os.path.join(pkg_share, 'urdf', urdf_name)
     bridge_config = os.path.join(pkg_share, 'params', bridge_name)
-    world_path = os.path.join(pkg_share, 'worlds', 'playground.sdf')
+    world_name = LaunchConfiguration('world').perform(context)
+    world_path = os.path.join(pkg_share, 'worlds', world_name)
     urdf_file, robot_description = _materialize_robot_urdf(xacro_path)
 
     use_sim_time = LaunchConfiguration('use_sim_time')
@@ -120,6 +121,9 @@ def generate_launch_description():
         DeclareLaunchArgument('z_pose', default_value='0.08'),
         DeclareLaunchArgument('robot_urdf', default_value='diff_drive.urdf.xacro'),
         DeclareLaunchArgument('bridge_config', default_value='bridge.yaml'),
+        DeclareLaunchArgument(
+            'world', default_value='playground.sdf',
+            description='World file under pnc_nav_sim/worlds'),
         DeclareLaunchArgument(
             'use_gui',
             default_value='true',

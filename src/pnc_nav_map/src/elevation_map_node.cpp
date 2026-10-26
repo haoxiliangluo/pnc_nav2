@@ -37,6 +37,8 @@ public:
     params.recenter_threshold = declare_parameter<double>(
       "elevation.recenter_threshold", params.recenter_threshold);
     params.fill_radius = declare_parameter<double>("elevation.fill_radius", params.fill_radius);
+    params.robot_clear_radius = declare_parameter<double>(
+      "elevation.robot_clear_radius", params.robot_clear_radius);
     params.trav.slope_max_deg = declare_parameter<double>(
       "elevation.slope_max_deg", params.trav.slope_max_deg);
     params.trav.step_max_m = declare_parameter<double>(

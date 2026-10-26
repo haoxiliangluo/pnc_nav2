@@ -149,18 +149,44 @@ Traversability ElevationMap::traversabilityAt(
   }
 
   // 8 邻域，顺序见 NeighborIndex；缺数据的格填 NaN
+  //
+  // KI-018：16 线激光的高程本身有噪声，直接拿相邻格做中心差分会把坡度放大 2–3 倍
+  // （实测 15° 斜坡被算成 27–34°，可通行性直接判 0）。这里先用 3×3 均值平滑一次再求梯度。
   static const int kDx[8] = {1, 1, 0, -1, -1, -1, 0, 1};
   static const int kDy[8] = {0, 1, 1, 1, 0, -1, -1, -1};
   const double nan = std::numeric_limits<double>::quiet_NaN();
+
+  auto boxMean = [this](int cx, int cy, double & out) {
+      double sum = 0.0;
+      int n = 0;
+      for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+          double z = 0.0;
+          if (cellMean(cx + dx, cy + dy, z)) {
+            sum += z;
+            ++n;
+          }
+        }
+      }
+      if (n == 0) {
+        return false;
+      }
+      out = sum / n;
+      return true;
+    };
+
+  double smoothed_center = center_z;
+  boxMean(mx, my, smoothed_center);
+
   std::vector<double> neighbors(8, nan);
   for (int i = 0; i < 8; ++i) {
     double z = 0.0;
-    if (cellMean(mx + kDx[i], my + kDy[i], z)) {
+    if (boxMean(mx + kDx[i], my + kDy[i], z)) {
       neighbors[i] = z;
     }
   }
 
-  return evaluateTraversability(center_z, neighbors, resolution_, params);
+  return evaluateTraversability(smoothed_center, neighbors, resolution_, params);
 }
 
 nav_msgs::msg::OccupancyGrid ElevationMap::toOccupancyGrid(

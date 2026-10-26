@@ -23,6 +23,7 @@ def generate_launch_description():
     use_gui = LaunchConfiguration('use_gui')
     cloud_topic = LaunchConfiguration('cloud_topic')
     use_elevation = LaunchConfiguration('use_elevation')
+    world = LaunchConfiguration('world')
 
     default_params = PathJoinSubstitution([
         FindPackageShare('pnc_nav_bringup'), 'config', 'nav_params.yaml'
@@ -41,6 +42,8 @@ def generate_launch_description():
                               description='3D 点云话题（填 "" 可关闭点云障碍层）'),
         DeclareLaunchArgument('use_elevation', default_value='false',
                               description='true = 启动高程图节点，并让全局规划叠加坡度/台阶代价'),
+        DeclareLaunchArgument('world', default_value='playground.sdf',
+                              description='pnc_nav_sim/worlds 下的世界文件（如 slope_test.sdf）'),
         DeclareLaunchArgument('x_pose', default_value='0.0'),
         DeclareLaunchArgument('y_pose', default_value='0.0'),
         DeclareLaunchArgument('z_pose', default_value='0.15'),
@@ -57,6 +60,7 @@ def generate_launch_description():
                 'x_pose': LaunchConfiguration('x_pose'),
                 'y_pose': LaunchConfiguration('y_pose'),
                 'z_pose': LaunchConfiguration('z_pose'),
+                'world': world,
             }.items(),
         ),
 

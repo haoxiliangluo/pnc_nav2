@@ -142,17 +142,24 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 - ✅ `ElevationBuilder`：`/points` → 高程图（TF、stride 降采样、高度带、滚动窗口、`fillUnknown` 补洞）
 - ✅ `ElevationCostmap`：实现 `CostmapInterface`（getCost / isOccupied / getTraversability / getGroundHeight）
 - ✅ 节点 `elevation_map_node`：发布 `/elevation_map`（OccupancyGrid）+ `/traversability_map`（TraversabilityMap）
-- ⬜ 斜坡/台阶 world 与 RViz 调参（下一步）
+- ✅ 斜坡/台阶 world：`pnc_nav_sim/worlds/slope_test.sdf`（15° 实心斜坡 + 0.78m 平台 + 12cm 台阶），
+  launch 增加 `world:=slope_test.sdf`
+- ⬜ RViz 目视调参（无 GUI 环境，仅用数值验证）
 - **实测（3D 激光车，8m 窗口 @0.1m）**：平地可通行性 0.90–0.98；箱子所在格 0.25（被判为难以通行）；
   补洞后 6400/6400 格全部有数据；机器人移动后窗口原点从 (-4.00,-4.00) 滚到 (-2.90,-4.04)
-- **仍待验收**：15° 斜坡 / 10cm 台阶场景、`getGroundHeight` 误差 < 0.05m
+- **斜坡实测**：15° 坡被估成 11–24°（坡顶接缝偏大），可通行性 0.56→0.26→0.04；目标设到平台上
+  能成功抵达（`success 53.6s/7.21m`），但 2D 差速车的 odom/TF 是平面输出（z 恒为 0），
+  **无法用 TF 验证爬坡高度** → 需要用 RViz 或点云/高程剖面验证
+- **仍待验收**：`getGroundHeight` 误差 < 0.05m（需要真值对比）、台阶阈值 8/12cm 的分界
 
 ### 3.2 地形代价接入规划（1 天）🟡 接线完成，验收受阻
 - ✅ `TraversabilityCostmapAdapter`（core，订阅 `/traversability_map`）+ `OverlayCostmap(静态, 地形)`
   + NavServer 参数 `use_elevation_costmap`（默认 false）
+- ✅ 修复 KI-017（机器人自己被视为障碍）：高程/点云层加 footprint 清除 + A* 起点容错
 - ✅ `gz_sim_3d_lidar_bringup.launch.py` 新增 `use_elevation:=true`（同时起高程节点）
-- ❌ **验收未通过**：开启后 A* 从 (3.9,0)→(0.5,0) 连续规划失败（见 `known_issues.md` KI-017）；
-  另外运行期 spawn 的障碍对 3D 激光不可见（KI-016），需要先用 world 内静态障碍重建验证场景
+- ✅ 验收：0→4.0 `18.6s/3.90m`、4.0→0.5 `57.2s/4.39m`（开启地形代价）；坡道场景能规划并抵达平台
+- ⚠️ 已知限制：运行期 spawn 的障碍对 3D 激光不可见（KI-016，改用 world 内静态障碍）；
+  坡度估计噪声（KI-018）
 - 备注：仍用 `AStar2D` + 2.5D 代价（对地面机器人足够）；`use_3d: true` 的真 3D 搜索留到多层场景
 
 ### 3.3 局部地形代价（1 天）
@@ -214,3 +221,4 @@ score(x)  = clamp(1 - slope/slope_max, 0, 1) *
 | 2026-10-23 | 3.1 第一步完成：`pnc_nav_map` 包 + `ElevationMap` + `traversability` + 10 个 gtest 全绿 |
 | 2026-10-23 | 3.1 主体完成：ElevationBuilder（含 fillUnknown 补洞）+ ElevationCostmap + 节点双话题；15 个 gtest 全绿 |
 | 2026-10-23 | 3.2 接线完成：TraversabilityCostmapAdapter + OverlayCostmap + launch 开关；验收受阻（KI-016/KI-017） |
+| 2026-10-23 | KI-017 修复；新增 slope_test 世界与 world 参数；记录 KI-018（坡度噪声） |

@@ -28,6 +28,7 @@
 | `pnc_nav_sim/gz_3d_lidar.launch.py` | 同一台差速车 + Velodyne 16 线（`diff_drive_3d.urdf.xacro` + `bridge_3d.yaml`） | ✅ 可用（输出 `/points`） |
 | `pnc_nav_bringup/gz_sim_3d_lidar_bringup.launch.py` | **3D 激光完整导航**：3D 车 + maps/111 + map_server + nav_server（点云障碍层）+ RViz | ✅ 可用 |
 | `pnc_nav_map/elevation_map.launch.py` | 高程图节点：`/points` → `/elevation_map` + `/traversability_map`（需先起 3D 仿真） | ✅ 可用（Phase 3.1） |
+| `gz_sim_3d_lidar_bringup.launch.py use_elevation:=true world:=slope_test.sdf` | 坡道/台阶场景 + 地形代价（Phase 3 验收） | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/sim_3d_bringup.launch.py` | 名义上的 Go2 3D 启动 | ❌ **不可用**：include 外部包 `go2_config` / `lio_sam`，本仓库不含 |

@@ -108,6 +108,7 @@ private:
   double cloud_min_z_{0.10};      // 高度带下限（map 系，滤掉地面）
   double cloud_max_z_{1.50};      // 高度带上限（滤掉树枝/天花板）
   double cloud_max_range_{8.0};   // 只取这个水平距离内的点 (m)
+  double robot_clear_radius_{0.45};// 机器人自身半径内的点直接丢弃
 
   // --- 窗口状态 ---
   std::string frame_id_{"map"};

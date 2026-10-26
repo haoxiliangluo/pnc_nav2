@@ -110,6 +110,14 @@ void ElevationBuilder::cloudCallback(const sensor_msgs::msg::PointCloud2::Shared
     const double my = ty + sin_yaw * px + cos_yaw * py;
     const double mz = tz + pz;
 
+    // footprint 清除：机器人自身的点（车体/轮子）不能被当成障碍，
+    // 否则测量到的"当前位置"可通行性会变成 0，A* 直接判 "Start is occupied"（KI-017）。
+    if (has_center_ &&
+      std::hypot(mx - center_x_, my - center_y_) < params_.robot_clear_radius)
+    {
+      continue;
+    }
+
     if (mz < params_.min_z || mz > params_.max_z) {
       continue;
     }
