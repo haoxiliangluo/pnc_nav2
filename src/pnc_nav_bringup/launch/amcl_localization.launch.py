@@ -24,6 +24,10 @@ def generate_launch_description():
     z_pose = LaunchConfiguration('z_pose')
     nav_params_file = LaunchConfiguration('params_file')
     map_yaml = LaunchConfiguration('map')
+    amcl_params_file = LaunchConfiguration('amcl_params')
+    init_x = LaunchConfiguration('initial_pose_x')
+    init_y = LaunchConfiguration('initial_pose_y')
+    init_yaw = LaunchConfiguration('initial_pose_yaw')
 
     default_params = PathJoinSubstitution([
         FindPackageShare('pnc_nav_bringup'), 'config', 'nav_params.yaml'
@@ -44,6 +48,14 @@ def generate_launch_description():
         DeclareLaunchArgument('z_pose', default_value='0.08'),
         DeclareLaunchArgument('params_file', default_value=default_params),
         DeclareLaunchArgument('map', default_value=default_map),
+        DeclareLaunchArgument(
+            'amcl_params', default_value=default_amcl_params,
+            description='AMCL 参数文件'),
+        DeclareLaunchArgument(
+            'initial_pose_x', default_value='0.0',
+            description='AMCL 初始位姿 x（sc40 地图用 -21.6）'),
+        DeclareLaunchArgument('initial_pose_y', default_value='0.0'),
+        DeclareLaunchArgument('initial_pose_yaw', default_value='0.0'),
 
         # SC40 world + pnc_diff_drive + ros_gz bridge
         IncludeLaunchDescription(
@@ -89,7 +101,13 @@ def generate_launch_description():
             executable='amcl',
             name='amcl',
             output='screen',
-            parameters=[default_amcl_params],
+            parameters=[
+                amcl_params_file,
+                {'set_initial_pose': True},
+                {'initial_pose.x': init_x},
+                {'initial_pose.y': init_y},
+                {'initial_pose.yaw': init_yaw},
+            ],
         ),
 
         Node(

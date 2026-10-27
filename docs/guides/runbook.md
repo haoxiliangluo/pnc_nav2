@@ -31,6 +31,8 @@
 | `pnc_nav_map/elevation_map.launch.py` | 高程图节点：`/points` → `/elevation_map` + `/traversability_map`（需先起 3D 仿真） | ✅ 可用（Phase 3.1） |
 | `gz_sim_3d_lidar_bringup.launch.py use_elevation:=true world:=slope_test.sdf` | 坡道/台阶场景 + 地形代价（Phase 3 验收） | ✅ 可用 |
 | `pnc_nav_task/mission.launch.py auto_start:=true` | 任务层：顺序多点 + 重试 + 暂停/取消（`/mission_status`） | ✅ 可用 |
+| `pnc_nav_locomotion/locomotion.launch.py` | 运动层：`/cmd_vel → /joint_commands`（FakeTrot 假步态插件） | ✅ 骨架可用 |
+| `./scripts/run_all_tests.sh [--sim]` | 一键回归：构建 + 30 个 gtest（+ 仿真冒烟） | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/sim_3d_bringup.launch.py` | 名义上的 Go2 3D 启动 | ❌ **不可用**：include 外部包 `go2_config` / `lio_sam`，本仓库不含 |
@@ -41,6 +43,7 @@
 | profile | 内容 | 适用 |
 |---|---|---|
 | `sim2d` | 2D 差速车 + maps/111 + nav_server + health_monitor（scan=nav_scan） | 日常开发、回归 |
+| `sim2d_amcl` | 2D 车 + AMCL 定位（`map→odom` 由 AMCL 提供，不再用静态 TF） | 定位联调 |
 | `sim3d` | 3D 激光车（点云障碍层，cloud=points） | 3D 感知/避障 |
 | `sim3d_elevation` | 3D + 高程图地形代价（Phase 3） | 地形相关 |
 | `real` | 只起 map_server + nav_server + health_monitor，TF/odom/scan 由外部提供 | 真机接入 |
@@ -131,6 +134,28 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `cloud_stride` / `cloud_min_z` / `cloud_max_z` / `cloud_max_range` | 8 / 0.10 / 1.50 / 8.0 | 点云降采样与高度带过滤 |
 
 调试：`python3 test/check_costmap_layers.py` 打印窗口尺寸/原点/占用格数；RViz 看 `/costmap` 与 `/obstacle_layer`。
+
+### 3.2f `locomotion.*`（运动层骨架）
+
+| 参数 | 现值 | 说明 |
+|---|---|---|
+| `plugin` | `pnc_nav_locomotion::FakeTrotLocomotion` | LocomotionController 插件（pluginlib） |
+| `instance_name` | `fake_trot` | 插件参数前缀（`fake_trot.*`） |
+| `cmd_vel_topic` / `joint_topic` | cmd_vel / joint_commands | 输入/输出话题 |
+| `cmd_vel_timeout` | 0.5 | 超时当零速 |
+| `fake_trot.frequency` / `gait_frequency` | 100 / 2.0 | 输出频率 / 步态频率 |
+| `fake_trot.max_stride` / `amplitude_speed` / `knee_lift` | 0.35 / 0.3 / 0.25 | 摆动幅值 / 速度映射 / 抬腿 |
+
+服务：`/locomotion/estop`、`/locomotion/reset`（`std_srvs/Trigger`）。
+真步态（CHAMP/RL/MPC）后续作为同一基类的新插件接入。
+
+### 3.2g `localization`（定位来源）
+
+`bringup.launch.py` 增加参数 `localization:=static|amcl`：
+- `static`：`static_transform_publisher` 提供 `map→odom`（默认，仿真/阶段 1）
+- `amcl`：`nav2_amcl` 提供 `map→odom`（需要 `/map` + `/nav_scan` + `initialpose`）
+
+`sim2d_amcl` profile 已内置 `localization=amcl`；`real` profile 可用 `localization:=amcl` 启用。
 
 ### 3.2e `mission.*`（任务层）
 
@@ -346,3 +371,4 @@ colcon build --symlink-install --packages-select \
 | 2026-10-23 | 新增高程图节点入口与 `elevation.*` 参数表 |
 | 2026-10-23 | 新增统一入口 `bringup.launch.py`（profile 化）与 health_monitor |
 | 2026-10-23 | 新增任务层 `pnc_nav_task`（多点/重试/暂停取消）与 `/nav_status`、`/mission_status` |
+| 2026-10-23 | 新增运动层骨架 `pnc_nav_locomotion`、`sim2d_amcl` profile、一键回归脚本 |

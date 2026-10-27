@@ -102,9 +102,17 @@ def main():
     print(f'  total_time     = {result.total_time:.2f} s')
     print(f'  distance       = {result.distance_traveled:.2f} m')
     print(f'  message        = {result.message}')
+
+    # 预期：feedback=成功(0)，cancel=取消(4)，unreachable=重试耗尽(3)
+    expect = {'feedback': 0, 'cancel': 4, 'unreachable': 3}[mode]
+    ok = (result.error_code == expect)
+    if mode == 'feedback':
+        ok = ok and bool(result.success)
+    print(f'== expectation ==  expect error_code={expect} -> {"OK" if ok else "MISMATCH"}')
+
     node.destroy_node()
     rclpy.shutdown()
-    return 0
+    return 0 if ok else 1
 
 
 if __name__ == '__main__':

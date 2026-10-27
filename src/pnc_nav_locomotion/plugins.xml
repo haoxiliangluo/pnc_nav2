@@ -1,0 +1,6 @@
+<library path="fake_trot_locomotion">
+  <class type="pnc_nav_locomotion::FakeTrotLocomotion"
+         base_class_type="pnc_nav_core::LocomotionControllerBase">
+    <description>教学用假步态：cmd_vel → 12 关节正弦指令（不接真步态）</description>
+  </class>
+</library>

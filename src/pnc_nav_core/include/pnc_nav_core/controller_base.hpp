@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <string>
+#include <string>
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
@@ -50,6 +51,7 @@ struct RobotState
  */
 struct JointCommands
 {
+  std::vector<std::string> joint_names;  // 关节名（插件填，节点原样转发）
   std::vector<double> positions;     // 目标关节角度
   std::vector<double> velocities;    // 目标关节速度
   std::vector<double> torques;       // 前馈力矩

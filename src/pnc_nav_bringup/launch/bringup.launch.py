@@ -25,6 +25,7 @@ PROFILES = {
     'sim2d':            {'kind': 'sim2d', 'scan': 'nav_scan', 'cloud': '',       'elevation': 'false'},
     'sim3d':            {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'false'},
     'sim3d_elevation':  {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'true'},
+    'sim2d_amcl':       {'kind': 'sim2d_amcl', 'scan': 'nav_scan', 'cloud': '',   'elevation': 'false'},
     'real':             {'kind': 'real',  'scan': 'scan',     'cloud': '',       'elevation': 'false'},
 }
 
@@ -44,7 +45,24 @@ def _launch_setup(context, *args, **kwargs):
 
     actions = [LogInfo(msg=f"[pnc_nav] bringup profile = {profile_name}")]
 
-    if profile['kind'] == 'sim2d':
+    localization = LaunchConfiguration('localization').perform(context)
+
+    if profile['kind'] == 'sim2d_amcl':
+        actions.append(IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution([
+                FindPackageShare('pnc_nav_bringup'), 'launch', 'amcl_localization.launch.py'])),
+            launch_arguments={
+                'use_sim_time': use_sim_time,
+                'use_gui': use_gui,
+                'use_rviz': use_rviz,
+                'params_file': params_file,
+                'map': map_yaml,
+                'initial_pose_x': LaunchConfiguration('initial_pose_x'),
+                'initial_pose_y': LaunchConfiguration('initial_pose_y'),
+                'initial_pose_yaw': LaunchConfiguration('initial_pose_yaw'),
+            }.items(),
+        ))
+    elif profile['kind'] == 'sim2d':
         actions.append(IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution([
                 FindPackageShare('pnc_nav_bringup'), 'launch', 'gz_sim_2d_bringup.launch.py'])),
@@ -70,17 +88,33 @@ def _launch_setup(context, *args, **kwargs):
                 'use_elevation': profile['elevation'],
             }.items(),
         ))
-    else:  # real：只起地图与导航服务，TF/odom/scan 由外部提供
+    else:  # real：地图 + 导航；TF/odom/scan 由外部提供（static=外部给 map->odom，amcl=本节点给）
+        const_arg = {'yaml_filename': map_yaml}
         actions.append(Node(
             package='nav2_map_server', executable='map_server', name='map_server',
             output='screen',
-            parameters=[{'yaml_filename': map_yaml}, {'use_sim_time': use_sim_time}],
+            parameters=[const_arg, {'use_sim_time': use_sim_time}],
         ))
+        managed = ['map_server']
+        if localization == 'amcl':
+            actions.append(Node(
+                package='nav2_amcl', executable='amcl', name='amcl', output='screen',
+                parameters=[
+                    PathJoinSubstitution([
+                        FindPackageShare('pnc_nav_bringup'), 'config', 'amcl_params.yaml']),
+                    {'use_sim_time': use_sim_time},
+                    {'set_initial_pose': True},
+                    {'initial_pose.x': LaunchConfiguration('initial_pose_x')},
+                    {'initial_pose.y': LaunchConfiguration('initial_pose_y')},
+                    {'initial_pose.yaw': LaunchConfiguration('initial_pose_yaw')},
+                ],
+            ))
+            managed.append('amcl')
         actions.append(Node(
             package='nav2_lifecycle_manager', executable='lifecycle_manager',
             name='lifecycle_manager_map', output='screen',
             parameters=[
-                {'autostart': True}, {'node_names': ['map_server']},
+                {'autostart': True}, {'node_names': managed},
                 {'use_sim_time': use_sim_time}, {'bond_timeout': 4.0},
                 {'attempt_respawn_reconnection': True},
                 {'bond_respawn_max_duration': 10.0},
@@ -109,7 +143,12 @@ def _launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('profile', default_value='sim2d',
-                              description='sim2d | sim3d | sim3d_elevation | real'),
+                              description='sim2d | sim2d_amcl | sim3d | sim3d_elevation | real'),
+        DeclareLaunchArgument('localization', default_value='static',
+                              description='static（固定 map->odom）| amcl（AMCL 提供 map->odom）'),
+        DeclareLaunchArgument('initial_pose_x', default_value='0.0'),
+        DeclareLaunchArgument('initial_pose_y', default_value='0.0'),
+        DeclareLaunchArgument('initial_pose_yaw', default_value='0.0'),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         DeclareLaunchArgument('use_gui', default_value='true'),
         DeclareLaunchArgument('use_rviz', default_value='true'),

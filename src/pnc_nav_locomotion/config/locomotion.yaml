@@ -1,0 +1,16 @@
+locomotion:
+  ros__parameters:
+    use_sim_time: true
+    locomotion:
+      plugin: "pnc_nav_locomotion::FakeTrotLocomotion"
+      instance_name: "fake_trot"
+      cmd_vel_topic: "cmd_vel"
+      joint_topic: "joint_commands"
+      cmd_vel_timeout: 0.5        # 多久没收到 cmd_vel 就当零速 (s)
+    fake_trot:
+      frequency: 100.0            # 输出频率 (Hz)
+      gait_frequency: 2.0         # 步态频率 (Hz)
+      max_stride: 0.35            # 最大摆动幅值 (rad)
+      amplitude_speed: 0.3        # 达到最大幅值对应的线速度 (m/s)
+      knee_lift: 0.25             # 抬腿幅值 (rad)
+      hip_yaw_gain: 0.2           # 角速度 → 髋关节耦合
