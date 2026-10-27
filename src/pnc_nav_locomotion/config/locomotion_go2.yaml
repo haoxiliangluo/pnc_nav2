@@ -1,0 +1,20 @@
+locomotion:
+  ros__parameters:
+    use_sim_time: true
+    locomotion:
+      plugin: "pnc_nav_locomotion::TrotGaitLocomotion"
+      instance_name: "trot"
+      cmd_vel_topic: "cmd_vel"
+      joint_topic: "joint_commands"
+      cmd_vel_timeout: 0.5
+    trot:
+      frequency: 100.0
+      gait: "walk"          # walk（三足支撑，开环更稳）| trot（对角，快但易倒）
+      cycle_time: 0.8
+      duty: 0.75
+      body_height: 0.30
+      step_height: 0.06
+      max_stride: 0.10
+      max_joint_speed: 4.0
+      thigh_length: 0.213
+      calf_length: 0.213

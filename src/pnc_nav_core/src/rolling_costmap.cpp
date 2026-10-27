@@ -68,10 +68,14 @@ RollingCostmap::RollingCostmap(
 
   // 2D 扫描与 3D 点云二选一：配置了 cloud_topic 就只订阅点云，
   // 避免在没有 nav_scan 的 3D 车上刷 "cannot transform laser" 的告警。
-  if (cloud_topic_.empty()) {
+  if (cloud_topic_.empty() && !scan_topic.empty()) {
     scan_sub_ = node_->create_subscription<sensor_msgs::msg::LaserScan>(
       scan_topic, rclcpp::SensorDataQoS(),
       std::bind(&RollingCostmap::scanCallback, this, std::placeholders::_1));
+  } else if (cloud_topic_.empty() && scan_topic.empty()) {
+    RCLCPP_WARN(
+      node_->get_logger(),
+      "RollingCostmap: 未配置 scan/cloud 话题，障碍层退化为静态图窗口");
   } else {
     cloud_sub_ = node_->create_subscription<sensor_msgs::msg::PointCloud2>(
       cloud_topic_, rclcpp::SensorDataQoS(),

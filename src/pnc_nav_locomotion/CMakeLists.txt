@@ -15,7 +15,10 @@ set(dependencies
   rclcpp pluginlib geometry_msgs std_srvs pnc_nav_core pnc_nav_interfaces
 )
 
-add_library(fake_trot_locomotion SHARED src/fake_trot_locomotion.cpp)
+add_library(fake_trot_locomotion SHARED
+  src/fake_trot_locomotion.cpp
+  src/trot_gait_locomotion.cpp
+)
 target_include_directories(fake_trot_locomotion PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>

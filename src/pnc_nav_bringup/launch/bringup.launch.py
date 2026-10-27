@@ -25,6 +25,8 @@ PROFILES = {
     'sim2d':            {'kind': 'sim2d', 'scan': 'nav_scan', 'cloud': '',       'elevation': 'false'},
     'sim3d':            {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'false'},
     'sim3d_elevation':  {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'true'},
+    'sim_go2':          {'kind': 'sim_go2', 'scan': '',       'cloud': '',
+                         'elevation': 'false'},
     'sim2d_amcl':       {'kind': 'sim2d_amcl', 'scan': 'nav_scan', 'cloud': '',   'elevation': 'false'},
     'sim2d_cartographer': {'kind': 'sim2d_cartographer', 'scan': 'nav_scan', 'cloud': '',
                            'elevation': 'false'},
@@ -49,7 +51,64 @@ def _launch_setup(context, *args, **kwargs):
 
     localization = LaunchConfiguration('localization').perform(context)
 
-    if profile['kind'] == 'sim2d_cartographer':
+    if profile['kind'] == 'sim_go2':
+        actions.append(IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution([
+                FindPackageShare('pnc_nav_sim'), 'launch', 'gz_go2.launch.py'])),
+            launch_arguments={
+                'use_sim_time': use_sim_time,
+                'use_gui': use_gui,
+            }.items(),
+        ))
+        actions.append(Node(
+            package='nav2_map_server', executable='map_server', name='map_server',
+            output='screen',
+            parameters=[{'yaml_filename': map_yaml}, {'use_sim_time': use_sim_time}],
+        ))
+        actions.append(Node(
+            package='nav2_lifecycle_manager', executable='lifecycle_manager',
+            name='lifecycle_manager_map', output='screen',
+            parameters=[
+                {'autostart': True}, {'node_names': ['map_server']},
+                {'use_sim_time': use_sim_time}, {'bond_timeout': 4.0},
+                {'attempt_respawn_reconnection': True},
+                {'bond_respawn_max_duration': 10.0},
+            ],
+        ))
+        actions.append(Node(
+            package='tf2_ros', executable='static_transform_publisher',
+            name='map_to_odom_tf',
+            arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+            parameters=[{'use_sim_time': use_sim_time}],
+        ))
+        actions.append(Node(
+            package='pnc_nav_core', executable='nav_server_node', name='nav_server',
+            output='screen',
+            parameters=[
+                params_file,
+                {'use_sim_time': use_sim_time},
+                # Go2 模型的 base 链接叫 "base"
+                {'robot_frame': 'base'},
+                {'local_costmap.scan_topic': ''},
+                {'local_costmap.cloud_topic': ''},
+            ],
+        ))
+        actions.append(Node(
+            package='pnc_nav_locomotion', executable='locomotion_node',
+            name='locomotion', output='screen',
+            parameters=[
+                PathJoinSubstitution([
+                    FindPackageShare('pnc_nav_locomotion'), 'config', 'locomotion_go2.yaml']),
+                {'use_sim_time': use_sim_time},
+            ],
+        ))
+        actions.append(Node(
+            package='pnc_nav_locomotion', executable='joint_command_bridge_node',
+            name='joint_command_bridge', output='screen',
+            parameters=[{'joint_bridge.prefix': '/model/go2/joint'},
+                        {'use_sim_time': use_sim_time}],
+        ))
+    elif profile['kind'] == 'sim2d_cartographer':
         # 建图模式：Cartographer 提供 map→odom 与 /map（不启动 nav_server）
         actions.append(IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution([
@@ -159,7 +218,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('profile', default_value='sim2d',
                               description='sim2d | sim2d_amcl | sim2d_cartographer | sim3d | '
-                                          'sim3d_elevation | real'),
+                                          'sim3d_elevation | sim_go2 | real'),
         DeclareLaunchArgument('localization', default_value='static',
                               description='static（固定 map->odom）| amcl（AMCL 提供 map->odom）'),
         DeclareLaunchArgument('initial_pose_x', default_value='0.0'),

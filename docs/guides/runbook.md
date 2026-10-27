@@ -33,7 +33,8 @@
 | `pnc_nav_task/mission.launch.py auto_start:=true` | 任务层：顺序多点 + 重试 + 暂停/取消（`/mission_status`） | ✅ 可用 |
 | `pnc_nav_locomotion/locomotion.launch.py` | 运动层：`/cmd_vel → /joint_commands`（FakeTrot 假步态插件） | ✅ 骨架可用 |
 | `pnc_nav_locomotion/quadruped_demo.launch.py` | 四足链路 demo（极简盒子四足模型） | ✅ 可用 |
-| `pnc_nav_locomotion/go2_demo.launch.py` | **Go2 链路 demo**：开源 `go2_description`（mesh 模型）+ 运动层 + 关节桥 | ✅ 可用 |
+| `pnc_nav_locomotion/go2_demo.launch.py` | **Go2 链路 demo**：开源 `go2_description` + 运动层（IK walk 步态）+ 关节桥 | ✅ 可用（开环） |
+| `bringup.launch.py profile:=sim_go2` | **四足导航闭环**：Go2 + 地图 + nav_server + 运动层 + odom（`robot_frame=base`） | 🟡 链路通，闭环精度待调 |
 | `./scripts/run_all_tests.sh [--sim]` | 一键回归：构建 + 30 个 gtest（+ 仿真冒烟） | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
@@ -138,7 +139,24 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 
 调试：`python3 test/check_costmap_layers.py` 打印窗口尺寸/原点/占用格数；RViz 看 `/costmap` 与 `/obstacle_layer`。
 
-### 3.2f `locomotion.*`（运动层骨架）
+### 3.2f `locomotion.*`（运动层）
+
+`config/locomotion_go2.yaml`（TrotGaitLocomotion，IK 步态）：
+
+| 参数 | 现值 | 说明 |
+|---|---|---|
+| `gait` | `walk` | `walk`（三足支撑，开环更稳）/ `trot`（对角，快但易倒） |
+| `cycle_time` / `duty` | 0.8 / 0.75 | 步态周期 / 支撑相占比 |
+| `body_height` | 0.30 | 髋到足端垂直距离（站立高度） |
+| `step_height` / `max_stride` | 0.06 / 0.10 | 抬腿高度 / 单腿最大步幅 |
+| `thigh_length` / `calf_length` | 0.213 / 0.213 | Go2 腿长（IK 用） |
+| `max_joint_speed` | 4.0 | 关节指令斜率上限（防起步冲击翻车） |
+
+`config/locomotion.yaml`（FakeTrotLocomotion，纯正弦，只做链路验证）。
+> 经验：gz `JointPositionController` 的 `p_gain` 从 200 降到 40、`cmd_max` 30→10 后
+> 机器人才不会起步就被"踢翻"。
+
+### 3.2f2 `locomotion.*`（FakeTrot 参数）
 
 | 参数 | 现值 | 说明 |
 |---|---|---|

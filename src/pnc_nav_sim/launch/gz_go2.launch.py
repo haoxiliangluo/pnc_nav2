@@ -27,7 +27,7 @@ def generate_launch_description():
                 'robot_urdf': 'go2.urdf',
                 'bridge_config': 'bridge_go2.yaml',
                 'robot_name': 'go2',
-                'z_pose': '0.40',
+                'z_pose': '0.55',
                 'mesh_search_path': PathJoinSubstitution([
                     FindPackageShare('pnc_nav_sim'), 'go2']),
                 'append_gazebo_file': PathJoinSubstitution([

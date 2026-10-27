@@ -27,7 +27,7 @@ def generate_launch_description():
             name='locomotion',
             output='screen',
             parameters=[PathJoinSubstitution([
-                FindPackageShare('pnc_nav_locomotion'), 'config', 'locomotion.yaml'])],
+                FindPackageShare('pnc_nav_locomotion'), 'config', 'locomotion_go2.yaml'])],
         ),
         Node(
             package='pnc_nav_locomotion',
