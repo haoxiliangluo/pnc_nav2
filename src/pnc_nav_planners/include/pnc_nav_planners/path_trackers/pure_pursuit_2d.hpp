@@ -82,7 +82,9 @@ private:
   double lookahead_gain_{0.5};     // Ld = min_ld + gain * speed  // 自适应前视距离增益
   double max_linear_vel_{0.5};// 最大线速度
   double max_angular_vel_{1.0};// 最大角速度
-  double min_linear_vel_{0.05};// 最小线速度
+  double min_linear_vel_{0.05};
+  double rotate_threshold_{0.6};// |heading_error| 超过它 → 原地转（rad）
+  double rotate_gain_{2.5};// 原地转的比例增益// 最小线速度
 };
 
 }  // namespace pnc_nav_planners

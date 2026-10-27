@@ -94,9 +94,11 @@ nav_server:
       min_lookahead: 0.4
       max_lookahead: 1.8
       lookahead_gain: 0.5          # 速度自适应前视增益
-      max_linear_vel: 0.25
-      max_angular_vel: 0.6
+      max_linear_vel: 0.30
+      max_angular_vel: 1.0
       min_linear_vel: 0.03
+      rotate_threshold: 0.6        # |航向误差| 超过它 → 原地转（rad）
+      rotate_gain: 2.5             # 原地转比例增益
 
     # --- 局部规划器参数: 与插件实例名 local_planner 对齐 ---
     local_planner:

@@ -103,7 +103,7 @@ ros2 service call /mission/cancel  std_srvs/srv/Trigger
 ros2 topic echo /mission_status
 ```
 
-实测：`[1,0] → [2,0]` 两点任务 `state=SUCCEEDED (2/2)`，约 20s；
+实测：`[1,0] → [2,0] → [0.5,0]` 三点任务 `state=SUCCEEDED (3/3)`，**32.9s**（折返段 19.9s）；
 运行中 cancel → `state=CANCELLED`，导航 goal 返回 `code=5`（CANCELED），任务不推进。
 
 ---

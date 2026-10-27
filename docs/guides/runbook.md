@@ -197,9 +197,11 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `lookahead_distance` | 0.6 | 0.8 | 基础前视距离（m）。大 → 更平滑但切弯；小 → 更贴路径但抖 |
 | `min_lookahead` / `max_lookahead` | 0.3 / 1.5 | 0.4 / 1.8 | 速度自适应前视的上下限 |
 | `lookahead_gain` | 0.5 | 0.5 | 前视距离随速度的增益 |
-| `max_linear_vel` | 0.5 | 0.25 | 最大线速度（m/s）。仿真 0.25 ≈ 4s/m |
-| `max_angular_vel` | 1.0 | 0.6 | 最大角速度（rad/s） |
+| `max_linear_vel` | 0.5 | 0.30 | 最大线速度（m/s） |
+| `max_angular_vel` | 1.0 | 1.0 | 最大角速度（rad/s）；折返/大转弯靠它提速 |
 | `min_linear_vel` | 0.05 | 0.03 | 最小线速度，太小会原地磨 |
+| `rotate_threshold` | 0.6 | 0.6 | 航向误差超过它 → 原地转（rad）；调大更"敢走"，调小更稳 |
+| `rotate_gain` | 2.5 | 2.5 | 原地转的比例增益（× 航向误差，再按 max_angular_vel 截断） |
 
 ### 3.5 `local_planner.*`（DWA2D，⚠️ 已知问题）
 

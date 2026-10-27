@@ -25,6 +25,8 @@ namespace pnc_nav_planners
         node_->declare_parameter(name_ + ".max_linear_vel", 0.5);
         node_->declare_parameter(name_ + ".max_angular_vel", 1.0);
         node_->declare_parameter(name_ + ".min_linear_vel", 0.05);
+        node_->declare_parameter(name_ + ".rotate_threshold", 0.6);
+        node_->declare_parameter(name_ + ".rotate_gain", 2.5);
         // 插件参数一律挂在 <实例名>. 下（KI-009）
         if (!node_->has_parameter(name_ + ".debug")) {
             node_->declare_parameter(name_ + ".debug", false);
@@ -37,6 +39,8 @@ namespace pnc_nav_planners
         max_linear_vel_ = node_->get_parameter(name_ + ".max_linear_vel").as_double();
         max_angular_vel_ = node_->get_parameter(name_ + ".max_angular_vel").as_double();
         min_linear_vel_ = node_->get_parameter(name_ + ".min_linear_vel").as_double();
+        rotate_threshold_ = node_->get_parameter(name_ + ".rotate_threshold").as_double();
+        rotate_gain_ = node_->get_parameter(name_ + ".rotate_gain").as_double();
         RCLCPP_INFO(node_->get_logger(), "PurePursuit2D configured: Ld=%.2f", lookahead_distance_);
     }
   void PurePursuit2D::activate()
@@ -135,9 +139,11 @@ namespace pnc_nav_planners
 
         // 大角度偏差（含反向）：先原地转，不要用曲率公式——
         // 前视点在正后方时 sin(heading_error)≈0，会算出"曲率 0"然后直着开走（KI-020 根因）。
-        if (std::abs(heading_error_) > 2.0) {
+        // 在阈值内才交给曲率控制；阈值/增益可调（rotate_threshold / rotate_gain）。
+        if (std::abs(heading_error_) > rotate_threshold_) {
             cmd.twist.linear.x = 0.0;
-            cmd.twist.angular.z = (heading_error_ > 0.0 ? 1.0 : -1.0) * max_angular_vel_;
+            cmd.twist.angular.z = std::clamp(
+                rotate_gain_ * heading_error_, -max_angular_vel_, max_angular_vel_);
             if (node_->get_parameter(name_ + ".debug").as_bool()) {
                 RCLCPP_INFO(
                     node_->get_logger(), "PurePursuit2D: rotate in place (heading_error=%.2f rad)",
@@ -152,6 +158,11 @@ namespace pnc_nav_planners
         {
             target_speed = std::max(min_linear_vel_, target_speed * (dist_to_goal / lookahead_distance_)); // 接近目标时减速
         }
+        // 小角度修正也降速：|heading_error| 越大越慢，避免"边走边画大弧"（折返/大转弯更稳）
+        const double heading_scale = std::cos(std::min(std::abs(heading_error_), 1.2));
+        target_speed = std::min(
+            max_linear_vel_,
+            std::max(min_linear_vel_, target_speed * std::max(0.3, heading_scale)));
         cmd.twist.linear.x = std::clamp(target_speed, min_linear_vel_, max_linear_vel_);
         cmd.twist.angular.z = std::clamp(curvature * cmd.twist.linear.x, -max_angular_vel_, max_angular_vel_);
         if(node_->get_parameter(name_ + ".debug").as_bool())
