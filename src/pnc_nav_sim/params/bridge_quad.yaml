@@ -23,8 +23,8 @@
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
 
-- ros_topic_name: "/model/quad/joint/FL_knee/cmd_pos"
-  gz_topic_name: "/model/quad/joint/FL_knee/cmd_pos"
+- ros_topic_name: "/model/quad/joint/FL_calf/cmd_pos"
+  gz_topic_name: "/model/quad/joint/FL_calf/cmd_pos"
   ros_type_name: "std_msgs/msg/Float64"
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
@@ -41,8 +41,8 @@
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
 
-- ros_topic_name: "/model/quad/joint/FR_knee/cmd_pos"
-  gz_topic_name: "/model/quad/joint/FR_knee/cmd_pos"
+- ros_topic_name: "/model/quad/joint/FR_calf/cmd_pos"
+  gz_topic_name: "/model/quad/joint/FR_calf/cmd_pos"
   ros_type_name: "std_msgs/msg/Float64"
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
@@ -59,8 +59,8 @@
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
 
-- ros_topic_name: "/model/quad/joint/RL_knee/cmd_pos"
-  gz_topic_name: "/model/quad/joint/RL_knee/cmd_pos"
+- ros_topic_name: "/model/quad/joint/RL_calf/cmd_pos"
+  gz_topic_name: "/model/quad/joint/RL_calf/cmd_pos"
   ros_type_name: "std_msgs/msg/Float64"
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
@@ -77,8 +77,8 @@
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
 
-- ros_topic_name: "/model/quad/joint/RR_knee/cmd_pos"
-  gz_topic_name: "/model/quad/joint/RR_knee/cmd_pos"
+- ros_topic_name: "/model/quad/joint/RR_calf/cmd_pos"
+  gz_topic_name: "/model/quad/joint/RR_calf/cmd_pos"
   ros_type_name: "std_msgs/msg/Float64"
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ

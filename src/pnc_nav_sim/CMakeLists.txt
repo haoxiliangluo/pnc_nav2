@@ -3,7 +3,7 @@ project(pnc_nav_sim)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY worlds models urdf params launch
+install(DIRECTORY worlds models urdf params launch go2
   DESTINATION share/${PROJECT_NAME}
 )
 

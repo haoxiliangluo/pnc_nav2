@@ -176,7 +176,7 @@
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>FL_knee_joint</joint_name>
-      <topic>/model/quad/joint/FL_knee/cmd_pos</topic>
+      <topic>/model/quad/joint/FL_calf/cmd_pos</topic>
     </plugin>
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
@@ -191,7 +191,7 @@
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>FR_knee_joint</joint_name>
-      <topic>/model/quad/joint/FR_knee/cmd_pos</topic>
+      <topic>/model/quad/joint/FR_calf/cmd_pos</topic>
     </plugin>
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
@@ -206,7 +206,7 @@
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>RL_knee_joint</joint_name>
-      <topic>/model/quad/joint/RL_knee/cmd_pos</topic>
+      <topic>/model/quad/joint/RL_calf/cmd_pos</topic>
     </plugin>
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
@@ -221,7 +221,7 @@
     <plugin filename="gz-sim-joint-position-controller-system"
             name="gz::sim::systems::JointPositionController">
       <joint_name>RR_knee_joint</joint_name>
-      <topic>/model/quad/joint/RR_knee/cmd_pos</topic>
+      <topic>/model/quad/joint/RR_calf/cmd_pos</topic>
     </plugin>
   </gazebo>
 </robot>

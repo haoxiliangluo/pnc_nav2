@@ -200,10 +200,11 @@
 
 | 项 | 内容 |
 |---|---|
-| 现状 | `quadruped.urdf.xacro` 是极简四足（4 腿 × 3 关节、盒子几何）；`FakeTrotLocomotion` 输出正弦关节指令，靠 gz `JointPositionController` 驱动 |
-| 已验证 | `cmd_vel=0.3` → `/joint_states` 中 `FL_thigh_joint` 摆动 ±0.37 rad（幅值 0.35）；静态时关节 ≈0 |
-| 不支持 | 接触时序/落足规划（机器人会倒）、Go2 真实模型（mesh/惯量/限位）、CHAMP/RL 步态、与导航栈闭环（无 odom/定位） |
-| 下一步 | 把 Go2 模型（URDF + mesh）替换进来；接入 CHAMP 或 RL 步态插件；给四足补 odom（腿部里程计或 IMU）后再接导航 |
+| 现状 | 已接入 **Unitree 官方 `go2_description`**（BSD，vendored 在 `src/pnc_nav_sim/go2/`，含 dae 网格与 12 关节），
+用我们的 gz `JointPositionController` + `FakeTrotLocomotion` 驱动；另保留极简盒子四足做对照 |
+| 已验证 | `cmd_vel=0.3` → `/joint_states` 中 Go2 `FL_thigh_joint` 摆动 **-0.50 ~ +0.46 rad**；静态时关节≈0；模型在 gz 中正常加载（mesh 由 `package://` → `file://` 解析） |
+| 不支持 | 真步态（无接触时序/落足，机器人会倒）、CHAMP/RL 集成、四足 odom（腿部里程计/IMU）、与导航栈闭环 |
+| 下一步 | 接 CHAMP 或 RL 步态插件；补 odom；再考虑四足进 `bringup` profile |
 
 ### KI-019 坡面空洞假台阶（地形质量）🟡 已缓解，DWA 上坡仍受限
 
@@ -258,3 +259,4 @@ void AStar2D::cleanup() {
 | 2026-10-23 | 新增任务层与 `/nav_status`、`/mission_status`；新增 KI-020（短距离折返 PP 跑偏） |
 | 2026-10-23 | KI-020 修复（前视索引单调推进 + 大角度原地转）并加回归单测；KI-009 修复 |
 | 2026-10-23 | 地形质量：平面拟合填充 + 起点清除（KI-019 缓解）；新增 KI-021（四足 demo 只是链路验证） |
+| 2026-10-23 | KI-021 更新：已换用官方 go2_description 模型（仍无真步态/odom） |

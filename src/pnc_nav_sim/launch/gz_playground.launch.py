@@ -2,6 +2,7 @@
 """Gazebo Harmonic playground + simple stock DiffDrive robot + ros_gz bridge."""
 
 import os
+import re
 import tempfile
 import subprocess
 
@@ -19,11 +20,36 @@ from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 
 
-def _materialize_robot_urdf(xacro_path: str) -> tuple[str, str]:
+def _materialize_robot_urdf(xacro_path: str, mesh_search_path: str = '',
+                            append_gazebo_file: str = '') -> tuple[str, str]:
     urdf_file = os.path.join(tempfile.gettempdir(), 'pnc_nav_sim_diff_drive.urdf')
     subprocess.run(['xacro', xacro_path, '-o', urdf_file], check=True)
     with open(urdf_file, 'r', encoding='utf-8') as f:
         robot_description = f.read()
+
+    # package://pkg/... → file://<search_root>/pkg/...（gz 不认 package://）
+    if mesh_search_path:
+        roots = [r for r in mesh_search_path.split(':') if r]
+        def _replace(match):
+            pkg = match.group(1)
+            for root in roots:
+                candidate = os.path.join(root, pkg)
+                if os.path.isdir(candidate):
+                    return 'file://' + candidate + '/'
+            return match.group(0)
+        robot_description = re.sub(r'package://([^/]+)/', _replace, robot_description)
+
+    # 追加 gz 插件块（例如 12 个关节位置控制器）
+    if append_gazebo_file:
+        try:
+            with open(append_gazebo_file, 'r', encoding='utf-8') as f:
+                extra = f.read()
+            robot_description = robot_description.replace('</robot>', extra + '</robot>')
+        except OSError:
+            pass
+
+    with open(urdf_file, 'w', encoding='utf-8') as f:
+        f.write(robot_description)
     return urdf_file, robot_description
 
 
@@ -38,7 +64,10 @@ def _launch_setup(context, *args, **kwargs):
     bridge_config = os.path.join(pkg_share, 'params', bridge_name)
     world_name = LaunchConfiguration('world').perform(context)
     world_path = os.path.join(pkg_share, 'worlds', world_name)
-    urdf_file, robot_description = _materialize_robot_urdf(xacro_path)
+    mesh_search_path = LaunchConfiguration('mesh_search_path').perform(context)
+    append_gazebo = LaunchConfiguration('append_gazebo_file').perform(context)
+    urdf_file, robot_description = _materialize_robot_urdf(
+        xacro_path, mesh_search_path, append_gazebo)
 
     use_sim_time = LaunchConfiguration('use_sim_time')
     robot_name = LaunchConfiguration('robot_name')
@@ -118,6 +147,12 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         DeclareLaunchArgument('robot_name', default_value='pnc_diff_drive'),
+        DeclareLaunchArgument(
+            'mesh_search_path', default_value='',
+            description='package://<pkg>/ 解析根目录（冒号分隔，可多个）'),
+        DeclareLaunchArgument(
+            'append_gazebo_file', default_value='',
+            description='追加到 URDF </robot> 前的 XML 片段（gz 插件）'),
         DeclareLaunchArgument('x_pose', default_value='0.0'),
         DeclareLaunchArgument('y_pose', default_value='0.0'),
         DeclareLaunchArgument('z_pose', default_value='0.08'),

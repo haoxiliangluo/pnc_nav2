@@ -32,7 +32,8 @@
 | `gz_sim_3d_lidar_bringup.launch.py use_elevation:=true world:=slope_test.sdf` | 坡道/台阶场景 + 地形代价（Phase 3 验收） | ✅ 可用 |
 | `pnc_nav_task/mission.launch.py auto_start:=true` | 任务层：顺序多点 + 重试 + 暂停/取消（`/mission_status`） | ✅ 可用 |
 | `pnc_nav_locomotion/locomotion.launch.py` | 运动层：`/cmd_vel → /joint_commands`（FakeTrot 假步态插件） | ✅ 骨架可用 |
-| `pnc_nav_locomotion/quadruped_demo.launch.py` | **四足链路 demo**：极简四足模型 + 运动层 + 关节指令桥（gz 关节真的会动） | ✅ 可用 |
+| `pnc_nav_locomotion/quadruped_demo.launch.py` | 四足链路 demo（极简盒子四足模型） | ✅ 可用 |
+| `pnc_nav_locomotion/go2_demo.launch.py` | **Go2 链路 demo**：开源 `go2_description`（mesh 模型）+ 运动层 + 关节桥 | ✅ 可用 |
 | `./scripts/run_all_tests.sh [--sim]` | 一键回归：构建 + 30 个 gtest（+ 仿真冒烟） | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
@@ -375,3 +376,4 @@ colcon build --symlink-install --packages-select \
 | 2026-10-23 | 新增任务层 `pnc_nav_task`（多点/重试/暂停取消）与 `/nav_status`、`/mission_status` |
 | 2026-10-23 | 新增运动层骨架 `pnc_nav_locomotion`、`sim2d_amcl` profile、一键回归脚本 |
 | 2026-10-23 | 新增 `sim2d_cartographer` 建图 profile、极简四足模型与 `quadruped_demo` 链路 |
+| 2026-10-23 | 接入开源 `go2_description`（Unitree 官方模型）+ `go2_demo` 链路 |

@@ -17,10 +17,10 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr int kJoints = 12;   // 4 腿 × 3 关节
 
 const char * kJointNames[kJoints] = {
-  "FL_hip", "FL_thigh", "FL_knee",
-  "FR_hip", "FR_thigh", "FR_knee",
-  "RL_hip", "RL_thigh", "RL_knee",
-  "RR_hip", "RR_thigh", "RR_knee",
+  "FL_hip", "FL_thigh", "FL_calf",
+  "FR_hip", "FR_thigh", "FR_calf",
+  "RL_hip", "RL_thigh", "RL_calf",
+  "RR_hip", "RR_thigh", "RR_calf",
 };
 
 // 对角步态（trot）：FL/RL 同相，FR/RR 反相
