@@ -32,8 +32,8 @@ struct ElevationBuilderParams
   double min_z{-0.30};           // map 系高度带下限（**包含地面**，地形需要）
   double max_z{1.50};            // map 系高度带上限
   double recenter_threshold{1.0};// 机器人移动超过它才滚动窗口 (m)
-  double fill_radius{0.4};       // 未知格填充半径 (m)，用于补 16 线激光的地面空洞
-  double robot_clear_radius{0.45};// 机器人自身半径内的点直接丢弃（否则会把自己当障碍）
+  double fill_radius{0.8};       // 未知格填充半径 (m)，需 >= robot_clear_radius 才能补上自身清除区
+  double robot_clear_radius{0.7}; // 机器人自身半径内的点直接丢弃（车体+轮子约 0.5m，留余量）
   int slope_baseline_cells{2};    // 求坡度的基线（格），2≈0.2m，越大越平滑
   TraversabilityParams trav;     // 可通行性阈值
 };

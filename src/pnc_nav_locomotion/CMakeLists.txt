@@ -25,6 +25,9 @@ ament_target_dependencies(fake_trot_locomotion ${dependencies})
 add_executable(locomotion_node src/locomotion_node.cpp)
 ament_target_dependencies(locomotion_node ${dependencies})
 
+add_executable(joint_command_bridge_node src/joint_command_bridge_node.cpp)
+ament_target_dependencies(joint_command_bridge_node ${dependencies})
+
 install(DIRECTORY include/ DESTINATION include)
 install(DIRECTORY config launch DESTINATION share/${PROJECT_NAME})
 install(TARGETS fake_trot_locomotion locomotion_node
@@ -33,7 +36,7 @@ install(TARGETS fake_trot_locomotion locomotion_node
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
-install(TARGETS locomotion_node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS locomotion_node joint_command_bridge_node DESTINATION lib/${PROJECT_NAME})
 
 pluginlib_export_plugin_description_file(pnc_nav_core plugins.xml)
 

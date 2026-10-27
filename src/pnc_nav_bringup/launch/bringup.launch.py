@@ -26,6 +26,8 @@ PROFILES = {
     'sim3d':            {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'false'},
     'sim3d_elevation':  {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'true'},
     'sim2d_amcl':       {'kind': 'sim2d_amcl', 'scan': 'nav_scan', 'cloud': '',   'elevation': 'false'},
+    'sim2d_cartographer': {'kind': 'sim2d_cartographer', 'scan': 'nav_scan', 'cloud': '',
+                           'elevation': 'false'},
     'real':             {'kind': 'real',  'scan': 'scan',     'cloud': '',       'elevation': 'false'},
 }
 
@@ -47,7 +49,18 @@ def _launch_setup(context, *args, **kwargs):
 
     localization = LaunchConfiguration('localization').perform(context)
 
-    if profile['kind'] == 'sim2d_amcl':
+    if profile['kind'] == 'sim2d_cartographer':
+        # 建图模式：Cartographer 提供 map→odom 与 /map（不启动 nav_server）
+        actions.append(IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(PathJoinSubstitution([
+                FindPackageShare('pnc_nav_bringup'), 'launch', 'cartographer_slam.launch.py'])),
+            launch_arguments={
+                'use_sim_time': use_sim_time,
+                'use_gui': use_gui,
+                'use_rviz': use_rviz,
+            }.items(),
+        ))
+    elif profile['kind'] == 'sim2d_amcl':
         actions.append(IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution([
                 FindPackageShare('pnc_nav_bringup'), 'launch', 'amcl_localization.launch.py'])),
@@ -135,6 +148,8 @@ def _launch_setup(context, *args, **kwargs):
             {'health.period': 2.0},
             {'health.scan_topic': profile['scan']},
             {'health.cloud_topic': profile['cloud']},
+            {'health.check_action_server': profile['kind'] != 'sim2d_cartographer'},
+            {'health.require_map': profile['kind'] != 'sim2d_cartographer'},
         ],
     ))
     return actions
@@ -143,7 +158,8 @@ def _launch_setup(context, *args, **kwargs):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('profile', default_value='sim2d',
-                              description='sim2d | sim2d_amcl | sim3d | sim3d_elevation | real'),
+                              description='sim2d | sim2d_amcl | sim2d_cartographer | sim3d | '
+                                          'sim3d_elevation | real'),
         DeclareLaunchArgument('localization', default_value='static',
                               description='static（固定 map->odom）| amcl（AMCL 提供 map->odom）'),
         DeclareLaunchArgument('initial_pose_x', default_value='0.0'),

@@ -1,0 +1,227 @@
+<?xml version="1.0"?>
+<robot name="quad">
+  <!-- 极简四足：4 腿 × 3 关节（hip/thigh/knee），只用于打通
+       "cmd_vel → LocomotionController → /joint_commands → gz 关节" 链路。
+       真模型（Go2）与真步态（CHAMP/RL）后续替换。 -->
+
+  <link name="base_link">
+    <inertial><mass value="3.0"/><inertia ixx="0.02" iyy="0.04" izz="0.05" ixy="0" ixz="0" iyz="0"/></inertial>
+    <visual><geometry><box size="0.50 0.30 0.10"/></geometry><material name="blue"><color rgba="0.2 0.4 0.8 1"/></material></visual>
+    <collision><geometry><box size="0.50 0.30 0.10"/></geometry></collision>
+  </link>
+
+  
+    <!-- FL leg -->
+    <link name="FL_hip">
+      <inertial><mass value="0.3"/><inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.05 0.05 0.05"/></geometry><material name="grey"><color rgba="0.4 0.4 0.4 1"/></material></visual>
+    </link>
+    <joint name="FL_hip_joint" type="revolute">
+      <parent link="base_link"/><child link="FL_hip"/>
+      <origin xyz="0.18 0.12 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-0.6" upper="0.6" effort="20" velocity="5"/>
+    </joint>
+
+    <link name="FL_thigh">
+      <inertial><mass value="0.5"/><inertia ixx="0.004" iyy="0.004" izz="0.0004" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.04 0.04 0.20"/></geometry><material name="grey"><color rgba="0.5 0.5 0.5 1"/></material></visual>
+      <visual><origin xyz="0 0 -0.10"/><geometry><box size="0.04 0.04 0.02"/></geometry></visual>
+    </link>
+    <joint name="FL_thigh_joint" type="revolute">
+      <parent link="FL_hip"/><child link="FL_thigh"/>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-0.9" upper="0.9" effort="20" velocity="5"/>
+    </joint>
+
+    <link name="FL_shin">
+      <inertial><mass value="0.25"/><inertia ixx="0.002" iyy="0.002" izz="0.0002" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.03 0.03 0.18"/></geometry><material name="dark"><color rgba="0.2 0.2 0.2 1"/></material></visual>
+      <visual><origin xyz="0 0 -0.09"/><geometry><box size="0.06 0.06 0.03"/></geometry></visual>
+    </link>
+    <joint name="FL_knee_joint" type="revolute">
+      <parent link="FL_thigh"/><child link="FL_shin"/>
+      <origin xyz="0 0 -0.21" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.6" upper="0.2" effort="20" velocity="5"/>
+    </joint>
+
+    <!-- FR leg -->
+    <link name="FR_hip">
+      <inertial><mass value="0.3"/><inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.05 0.05 0.05"/></geometry><material name="grey"><color rgba="0.4 0.4 0.4 1"/></material></visual>
+    </link>
+    <joint name="FR_hip_joint" type="revolute">
+      <parent link="base_link"/><child link="FR_hip"/>
+      <origin xyz="0.18 -0.12 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-0.6" upper="0.6" effort="20" velocity="5"/>
+    </joint>
+
+    <link name="FR_thigh">
+      <inertial><mass value="0.5"/><inertia ixx="0.004" iyy="0.004" izz="0.0004" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.04 0.04 0.20"/></geometry><material name="grey"><color rgba="0.5 0.5 0.5 1"/></material></visual>
+      <visual><origin xyz="0 0 -0.10"/><geometry><box size="0.04 0.04 0.02"/></geometry></visual>
+    </link>
+    <joint name="FR_thigh_joint" type="revolute">
+      <parent link="FR_hip"/><child link="FR_thigh"/>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-0.9" upper="0.9" effort="20" velocity="5"/>
+    </joint>
+
+    <link name="FR_shin">
+      <inertial><mass value="0.25"/><inertia ixx="0.002" iyy="0.002" izz="0.0002" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.03 0.03 0.18"/></geometry><material name="dark"><color rgba="0.2 0.2 0.2 1"/></material></visual>
+      <visual><origin xyz="0 0 -0.09"/><geometry><box size="0.06 0.06 0.03"/></geometry></visual>
+    </link>
+    <joint name="FR_knee_joint" type="revolute">
+      <parent link="FR_thigh"/><child link="FR_shin"/>
+      <origin xyz="0 0 -0.21" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.6" upper="0.2" effort="20" velocity="5"/>
+    </joint>
+
+    <!-- RL leg -->
+    <link name="RL_hip">
+      <inertial><mass value="0.3"/><inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.05 0.05 0.05"/></geometry><material name="grey"><color rgba="0.4 0.4 0.4 1"/></material></visual>
+    </link>
+    <joint name="RL_hip_joint" type="revolute">
+      <parent link="base_link"/><child link="RL_hip"/>
+      <origin xyz="-0.18 0.12 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-0.6" upper="0.6" effort="20" velocity="5"/>
+    </joint>
+
+    <link name="RL_thigh">
+      <inertial><mass value="0.5"/><inertia ixx="0.004" iyy="0.004" izz="0.0004" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.04 0.04 0.20"/></geometry><material name="grey"><color rgba="0.5 0.5 0.5 1"/></material></visual>
+      <visual><origin xyz="0 0 -0.10"/><geometry><box size="0.04 0.04 0.02"/></geometry></visual>
+    </link>
+    <joint name="RL_thigh_joint" type="revolute">
+      <parent link="RL_hip"/><child link="RL_thigh"/>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-0.9" upper="0.9" effort="20" velocity="5"/>
+    </joint>
+
+    <link name="RL_shin">
+      <inertial><mass value="0.25"/><inertia ixx="0.002" iyy="0.002" izz="0.0002" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.03 0.03 0.18"/></geometry><material name="dark"><color rgba="0.2 0.2 0.2 1"/></material></visual>
+      <visual><origin xyz="0 0 -0.09"/><geometry><box size="0.06 0.06 0.03"/></geometry></visual>
+    </link>
+    <joint name="RL_knee_joint" type="revolute">
+      <parent link="RL_thigh"/><child link="RL_shin"/>
+      <origin xyz="0 0 -0.21" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.6" upper="0.2" effort="20" velocity="5"/>
+    </joint>
+
+    <!-- RR leg -->
+    <link name="RR_hip">
+      <inertial><mass value="0.3"/><inertia ixx="0.001" iyy="0.001" izz="0.001" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.05 0.05 0.05"/></geometry><material name="grey"><color rgba="0.4 0.4 0.4 1"/></material></visual>
+    </link>
+    <joint name="RR_hip_joint" type="revolute">
+      <parent link="base_link"/><child link="RR_hip"/>
+      <origin xyz="-0.18 -0.12 0" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-0.6" upper="0.6" effort="20" velocity="5"/>
+    </joint>
+
+    <link name="RR_thigh">
+      <inertial><mass value="0.5"/><inertia ixx="0.004" iyy="0.004" izz="0.0004" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.04 0.04 0.20"/></geometry><material name="grey"><color rgba="0.5 0.5 0.5 1"/></material></visual>
+      <visual><origin xyz="0 0 -0.10"/><geometry><box size="0.04 0.04 0.02"/></geometry></visual>
+    </link>
+    <joint name="RR_thigh_joint" type="revolute">
+      <parent link="RR_hip"/><child link="RR_thigh"/>
+      <origin xyz="0 0 -0.02" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-0.9" upper="0.9" effort="20" velocity="5"/>
+    </joint>
+
+    <link name="RR_shin">
+      <inertial><mass value="0.25"/><inertia ixx="0.002" iyy="0.002" izz="0.0002" ixy="0" ixz="0" iyz="0"/></inertial>
+      <visual><geometry><box size="0.03 0.03 0.18"/></geometry><material name="dark"><color rgba="0.2 0.2 0.2 1"/></material></visual>
+      <visual><origin xyz="0 0 -0.09"/><geometry><box size="0.06 0.06 0.03"/></geometry></visual>
+    </link>
+    <joint name="RR_knee_joint" type="revolute">
+      <parent link="RR_thigh"/><child link="RR_shin"/>
+      <origin xyz="0 0 -0.21" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.6" upper="0.2" effort="20" velocity="5"/>
+    </joint>
+
+
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>joint_states</topic>
+    </plugin>
+  </gazebo>
+  <gazebo>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FL_hip_joint</joint_name>
+      <topic>/model/quad/joint/FL_hip/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FL_thigh_joint</joint_name>
+      <topic>/model/quad/joint/FL_thigh/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FL_knee_joint</joint_name>
+      <topic>/model/quad/joint/FL_knee/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FR_hip_joint</joint_name>
+      <topic>/model/quad/joint/FR_hip/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FR_thigh_joint</joint_name>
+      <topic>/model/quad/joint/FR_thigh/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FR_knee_joint</joint_name>
+      <topic>/model/quad/joint/FR_knee/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RL_hip_joint</joint_name>
+      <topic>/model/quad/joint/RL_hip/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RL_thigh_joint</joint_name>
+      <topic>/model/quad/joint/RL_thigh/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RL_knee_joint</joint_name>
+      <topic>/model/quad/joint/RL_knee/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RR_hip_joint</joint_name>
+      <topic>/model/quad/joint/RR_hip/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RR_thigh_joint</joint_name>
+      <topic>/model/quad/joint/RR_thigh/cmd_pos</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RR_knee_joint</joint_name>
+      <topic>/model/quad/joint/RR_knee/cmd_pos</topic>
+    </plugin>
+  </gazebo>
+</robot>

@@ -32,6 +32,7 @@
 | `gz_sim_3d_lidar_bringup.launch.py use_elevation:=true world:=slope_test.sdf` | 坡道/台阶场景 + 地形代价（Phase 3 验收） | ✅ 可用 |
 | `pnc_nav_task/mission.launch.py auto_start:=true` | 任务层：顺序多点 + 重试 + 暂停/取消（`/mission_status`） | ✅ 可用 |
 | `pnc_nav_locomotion/locomotion.launch.py` | 运动层：`/cmd_vel → /joint_commands`（FakeTrot 假步态插件） | ✅ 骨架可用 |
+| `pnc_nav_locomotion/quadruped_demo.launch.py` | **四足链路 demo**：极简四足模型 + 运动层 + 关节指令桥（gz 关节真的会动） | ✅ 可用 |
 | `./scripts/run_all_tests.sh [--sim]` | 一键回归：构建 + 30 个 gtest（+ 仿真冒烟） | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
@@ -44,6 +45,7 @@
 |---|---|---|
 | `sim2d` | 2D 差速车 + maps/111 + nav_server + health_monitor（scan=nav_scan） | 日常开发、回归 |
 | `sim2d_amcl` | 2D 车 + AMCL 定位（`map→odom` 由 AMCL 提供，不再用静态 TF） | 定位联调 |
+| `sim2d_cartographer` | Cartographer 建图（cartographer_node + /map，无 nav_server） | 建图 |
 | `sim3d` | 3D 激光车（点云障碍层，cloud=points） | 3D 感知/避障 |
 | `sim3d_elevation` | 3D + 高程图地形代价（Phase 3） | 地形相关 |
 | `real` | 只起 map_server + nav_server + health_monitor，TF/odom/scan 由外部提供 | 真机接入 |
@@ -372,3 +374,4 @@ colcon build --symlink-install --packages-select \
 | 2026-10-23 | 新增统一入口 `bringup.launch.py`（profile 化）与 health_monitor |
 | 2026-10-23 | 新增任务层 `pnc_nav_task`（多点/重试/暂停取消）与 `/nav_status`、`/mission_status` |
 | 2026-10-23 | 新增运动层骨架 `pnc_nav_locomotion`、`sim2d_amcl` profile、一键回归脚本 |
+| 2026-10-23 | 新增 `sim2d_cartographer` 建图 profile、极简四足模型与 `quadruped_demo` 链路 |

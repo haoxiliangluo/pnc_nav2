@@ -41,6 +41,7 @@ def _launch_setup(context, *args, **kwargs):
     urdf_file, robot_description = _materialize_robot_urdf(xacro_path)
 
     use_sim_time = LaunchConfiguration('use_sim_time')
+    robot_name = LaunchConfiguration('robot_name')
     x_pose = LaunchConfiguration('x_pose')
     y_pose = LaunchConfiguration('y_pose')
     z_pose = LaunchConfiguration('z_pose')
@@ -62,7 +63,7 @@ def _launch_setup(context, *args, **kwargs):
             package='ros_gz_sim',
             executable='create',
             arguments=[
-                '-name', 'pnc_diff_drive',
+                '-name', robot_name,
                 '-file', urdf_file,
                 '-x', x_pose,
                 '-y', y_pose,
@@ -116,6 +117,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true'),
+        DeclareLaunchArgument('robot_name', default_value='pnc_diff_drive'),
         DeclareLaunchArgument('x_pose', default_value='0.0'),
         DeclareLaunchArgument('y_pose', default_value='0.0'),
         DeclareLaunchArgument('z_pose', default_value='0.08'),

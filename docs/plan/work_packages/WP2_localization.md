@@ -1,6 +1,6 @@
 # WP2 定位集成（profile 化）
 
-> 负责人：定位 agent ｜ 状态：待实现
+> 负责人：定位 agent ｜ 状态：已实现（sim2d_amcl / sim2d_cartographer / real+amcl）
 > 依赖：`nav2_amcl`（apt）、`amcl_localization.launch.py`（已有，未接入 profile）
 
 ## 目标

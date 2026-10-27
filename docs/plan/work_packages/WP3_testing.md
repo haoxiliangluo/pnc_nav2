@@ -1,6 +1,6 @@
 # WP3 测试与回归（测试 agent）
 
-> 负责人：测试 agent ｜ 状态：待实现
+> 负责人：测试 agent ｜ 状态：已实现（run_all_tests.sh + docs/testing.md）
 > 依赖：WP1/WP2 的接口；现有 26 个 gtest + 3 个冒烟脚本
 
 ## 目标

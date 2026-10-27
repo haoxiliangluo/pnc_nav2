@@ -33,6 +33,7 @@ void AStar2D::configure(
     node_->declare_parameter(name_ + ".allow_unknown", false);
     node_->declare_parameter(name_ + ".diagonal_movement", true);
     node_->declare_parameter(name_ + ".bspline_sample_count", 10);
+    node_->declare_parameter(name_ + ".start_clear_radius", 0.8);
 
     resolution_ = node_->get_parameter(name_ + ".resolution").as_double();
     heuristic_weight_ = node_->get_parameter(name_ + ".heuristic_weight").as_double();
@@ -41,6 +42,7 @@ void AStar2D::configure(
     bspline_sample_count_ = std::max(
       1,
       static_cast<int>(node_->get_parameter(name_ + ".bspline_sample_count").as_int()));
+    start_clear_radius_ = node_->get_parameter(name_ + ".start_clear_radius").as_double();
     //diagonal_movement_ = node_->get_parameter(name_ + ".diagonal_movement").as_bool();
 }
 
@@ -338,7 +340,11 @@ nav_msgs::msg::Path AStar2D::createPlan(
         gridToWorld(neighbor,wx,wy);
 
         if(!costmap_->isInBounds(wx, wy, 0.0)){ ++stat_bounds; continue;}
-        if(costmap_->isOccupied(wx, wy, 0.0)){ ++stat_occupied; continue;}
+        // 起点自身清除：机器人站位附近（footprint/传感器噪声）不参与阻挡判断
+        const bool near_start =
+          start_clear_radius_ > 0.0 &&
+          std::hypot(wx - start.pose.position.x, wy - start.pose.position.y) <= start_clear_radius_;
+        if(!near_start && costmap_->isOccupied(wx, wy, 0.0)){ ++stat_occupied; continue;}
         if (!allow_unknown_ && costmap_->getCost(wx, wy, 0.0) == pnc_nav_core::cost_values::UNKNOWN)
         { ++stat_unknown; continue;
         }        

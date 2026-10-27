@@ -112,3 +112,32 @@ TEST(ElevationMap, NoisyRampSlopeIsNotAmplified)
   EXPECT_NEAR(t.slope_rad * 180.0 / M_PI, 15.0, 4.0);
   EXPECT_GT(t.score, 0.35);
 }
+
+TEST(ElevationMap, HoleInRampIsFilledAlongSurface)   // KI-019 回归
+{
+  // 15° 斜坡上挖一个 0.6m×0.2m 的空洞，平面拟合填充应沿坡面补，而不是补成地面高度
+  ElevationMap map(0.1, 0.0, 0.0, 40, 20);
+  const double slope = std::tan(15.0 * M_PI / 180.0);
+  for (int mx = 0; mx < map.width(); ++mx) {
+    for (int my = 0; my < map.height(); ++my) {
+      const double x = map.originX() + (mx + 0.5) * map.resolution();
+      const double y = map.originY() + (my + 0.5) * map.resolution();
+      if (x > 1.6 && x < 2.2 && y > 0.4 && y < 0.6) {
+        continue;   // 空洞：不写入任何点
+      }
+      map.addPoint(x, y, slope * x);
+    }
+  }
+
+  map.fillUnknown(0.4);
+
+  double z = 0.0;
+  ASSERT_TRUE(map.getGroundHeight(1.9, 0.5, z));
+  EXPECT_NEAR(z, slope * 1.9, 0.06);   // 应贴着坡面，而不是 0
+
+  TraversabilityParams params;
+  params.slope_max_deg = 25.0;
+  const auto t = map.traversabilityAt(1.9, 0.5, params);
+  EXPECT_NEAR(t.slope_rad * 180.0 / M_PI, 15.0, 5.0);
+  EXPECT_GT(t.score, 0.3);
+}

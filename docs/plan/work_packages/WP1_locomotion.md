@@ -1,6 +1,6 @@
 # WP1 运动层骨架（Phase 4 入口）
 
-> 负责人：运动层 agent ｜ 状态：待实现
+> 负责人：运动层 agent ｜ 状态：已实现（骨架 + 四足 demo 链路）
 > 依赖：`pnc_nav_core` 的 `LocomotionControllerBase`（已存在，未接入）
 
 ## 目标

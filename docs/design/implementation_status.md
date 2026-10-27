@@ -24,7 +24,8 @@
 | （未在架构图中）`pnc_nav_map` | — | 🟡 新增 | 2.5D 高程图 + 可通行性 + 高程节点（Phase 3.1） |
 | （未在架构图中）`pnc_nav_diagnostics` | — | ✅ 新增 | 健康监控（`/diagnostics`：map/odom/sensor/tf/action） |
 | （未在架构图中）`pnc_nav_task` | — | ✅ 新增 | 任务层骨架（多点顺序/重试/暂停取消 + `/mission_status`） |
-| （未在架构图中）`pnc_nav_locomotion` | — | 🟡 新增 | 运动层骨架：`cmd_vel → /joint_commands`，FakeTrot 假步态插件 |
+| （未在架构图中）`pnc_nav_locomotion` | — | ✅ 新增 | 运动层骨架 + 四足 demo 链路（`cmd_vel → /joint_commands → gz 关节`） |
+| （新增仿真资产）`quadruped.urdf.xacro` | — | 🟡 极简四足 | 4 腿 × 3 关节 + JointPositionController；**不是 Go2 模型、不是真步态** |
 
 **`third_party/`**：实际只有 `cartographer`、`cartographer_ros`、`turtlebot3*`、`simdog_go2`（submodule，指向作者本地路径，克隆后为空）。
 架构图里写的 `octomap/`、`grid_map/`、`unitree_ros2/` **不存在**。

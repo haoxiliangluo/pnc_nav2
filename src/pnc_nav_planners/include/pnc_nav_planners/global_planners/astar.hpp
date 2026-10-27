@@ -85,6 +85,7 @@ class AStar2D : public pnc_nav_core::GlobalPlannerBase
   int max_iterations_{100000};// 最大迭代次数
   int bspline_sample_count_{10};// B样条每段采样点数
   bool allow_unknown_{false};// 是否允许未知区域
+  double start_clear_radius_{0.8};// 起点周围视为可通行的半径 (m)，0=关闭
   //bool diagonal_movement_{true};// 是否允许对角移动,四邻还没开发.
 
   // 地图边界（栅格坐标）

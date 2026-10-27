@@ -59,7 +59,13 @@ void ElevationMap::fillUnknown(double radius_m)
       if (cells_[idx].hasData()) {
         continue;
       }
+
+      // 收集邻域已知格（相对坐标 + 高程），用于平面拟合
+      double sx = 0.0, sy = 0.0, sz = 0.0;
+      double sxx = 0.0, sxy = 0.0, syy = 0.0, sxz = 0.0, syz = 0.0;
+      int n = 0;
       double lowest = std::numeric_limits<double>::infinity();
+      double highest = -std::numeric_limits<double>::infinity();
       for (int dy = -rc; dy <= rc; ++dy) {
         const int ny = my + dy;
         if (ny < 0 || ny >= height_) {
@@ -70,17 +76,83 @@ void ElevationMap::fillUnknown(double radius_m)
           if (nx < 0 || nx >= width_) {
             continue;
           }
+          if (std::hypot(dx, dy) > rc) {
+            continue;
+          }
           const Cell & c = cells_[static_cast<size_t>(indexOf(nx, ny))];
-          if (c.hasData() && std::hypot(dx, dy) <= rc) {
-            // 用格内最低点（而不是均值）：地面是最低的表面，墙/箱子的高点不会污染填充
-            lowest = std::min(lowest, c.z_min);
+          if (!c.hasData()) {
+            continue;
+          }
+          const double px = dx * resolution_;
+          const double py = dy * resolution_;
+          const double pz = c.z_min;
+          lowest = std::min(lowest, pz);
+          highest = std::max(highest, pz);
+          sx += px; sy += py; sz += pz;
+          sxx += px * px; sxy += px * py; syy += py * py;
+          sxz += px * pz; syz += py * pz;
+          ++n;
+        }
+      }
+
+      if (n == 0) {
+        continue;
+      }
+
+      double filled = lowest;
+      if (n >= 3) {
+        // 解 3x3 正规方程：z = a*x + b*y + c
+        const double m00 = sxx, m01 = sxy, m02 = sx;
+        const double m11 = syy, m12 = sy, m22 = static_cast<double>(n);
+        const double det =
+          m00 * (m11 * m22 - m12 * m12) -
+          m01 * (m01 * m22 - m12 * m02) +
+          m02 * (m01 * m12 - m11 * m02);
+        if (std::abs(det) > 1e-12) {
+          const double b0 = sxz, b1 = syz, b2 = sz;
+          const double a =
+            (b0 * (m11 * m22 - m12 * m12) - m01 * (b1 * m22 - m12 * b2) +
+            m02 * (b1 * m12 - m11 * b2)) / det;
+          const double b =
+            (m00 * (b1 * m22 - m12 * b2) - b0 * (m01 * m22 - m12 * m02) +
+            m02 * (m01 * b2 - b1 * m02)) / det;
+          const double c =
+            (m00 * (m11 * b2 - b1 * m12) - m01 * (m01 * b2 - b1 * m02) +
+            b0 * (m01 * m12 - m11 * m02)) / det;
+
+          // 残差
+          double rms = 0.0;
+          for (int dy = -rc; dy <= rc; ++dy) {
+            const int ny = my + dy;
+            if (ny < 0 || ny >= height_) {
+              continue;
+            }
+            for (int dx = -rc; dx <= rc; ++dx) {
+              const int nx = mx + dx;
+              if (nx < 0 || nx >= width_ || std::hypot(dx, dy) > rc) {
+                continue;
+              }
+              const Cell & cell = cells_[static_cast<size_t>(indexOf(nx, ny))];
+              if (!cell.hasData()) {
+                continue;
+              }
+              const double pred = a * dx * resolution_ + b * dy * resolution_ + c;
+              const double e = cell.z_min - pred;
+              rms += e * e;
+            }
+          }
+          rms = std::sqrt(rms / static_cast<double>(n));
+          if (rms <= fill_planar_max_rms_) {
+            // 平面在中心处的值；限制在邻域 [lowest, highest] 内，避免外推出离谱高度
+            filled = std::clamp(c, lowest, highest);
           }
         }
       }
-      if (std::isfinite(lowest)) {
-        out[idx].z_sum = lowest;
-        out[idx].z_min = lowest;
-        out[idx].z_max = lowest;
+
+      if (std::isfinite(filled)) {
+        out[idx].z_sum = filled;
+        out[idx].z_min = filled;
+        out[idx].z_max = filled;
         out[idx].count = 1;
       }
     }
