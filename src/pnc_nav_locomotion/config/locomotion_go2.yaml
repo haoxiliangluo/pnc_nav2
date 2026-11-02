@@ -15,6 +15,6 @@ locomotion:
       body_height: 0.30
       step_height: 0.06
       max_stride: 0.10
-      max_joint_speed: 4.0
+      max_joint_speed: 3.0
       thigh_length: 0.213
       calf_length: 0.213

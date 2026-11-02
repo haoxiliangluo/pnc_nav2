@@ -81,7 +81,8 @@ void TrotGaitLocomotion::solveLegIk(
 
   const double cos_alpha = (l1_ * l1_ + d * d - l2_ * l2_) / (2.0 * l1_ * d);
   const double alpha = std::acos(std::clamp(cos_alpha, -1.0, 1.0));
-  thigh = std::atan2(foot_x, r) + alpha;
+  // URDF 约定：thigh 绕 +y 旋转使足端向 -x，所以这里对 foot_x 取负
+  thigh = std::atan2(-foot_x, r) + alpha;
 }
 
 pnc_nav_core::JointCommands TrotGaitLocomotion::standPose() const

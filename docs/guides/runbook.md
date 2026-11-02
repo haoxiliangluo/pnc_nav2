@@ -147,14 +147,15 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 |---|---|---|
 | `gait` | `walk` | `walk`（三足支撑，开环更稳）/ `trot`（对角，快但易倒） |
 | `cycle_time` / `duty` | 0.8 / 0.75 | 步态周期 / 支撑相占比 |
-| `body_height` | 0.30 | 髋到足端垂直距离（站立高度） |
+| `body_height` | 0.30 | 髋到足端垂直距离（gz 实测站立 z≈0.19，存在下垂） |
 | `step_height` / `max_stride` | 0.06 / 0.10 | 抬腿高度 / 单腿最大步幅 |
 | `thigh_length` / `calf_length` | 0.213 / 0.213 | Go2 腿长（IK 用） |
 | `max_joint_speed` | 4.0 | 关节指令斜率上限（防起步冲击翻车） |
 
 `config/locomotion.yaml`（FakeTrotLocomotion，纯正弦，只做链路验证）。
-> 经验：gz `JointPositionController` 的 `p_gain` 从 200 降到 40、`cmd_max` 30→10 后
-> 机器人才不会起步就被"踢翻"。
+> 经验（踩坑记录）：gz `JointPositionController` 用 `p_gain=40 / d_gain=4 / cmd_max=10`
+> 时最稳（能站立）；`p_gain≥80 + cmd_max≥20` 起步必翻；但 `cmd_max` 小于 10 也托不住身体。
+> 开环 IK 步态在 gz 里推进不可靠（脚端打滑），真步态建议接 CHAMP（见 known_issues KI-021）。
 
 ### 3.2f2 `locomotion.*`（FakeTrot 参数）
 
