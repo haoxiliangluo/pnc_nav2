@@ -1,0 +1,177 @@
+  <gazebo>
+    <plugin filename="gz-sim-odometry-publisher-system"
+            name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base</robot_base_frame>
+      <odom_topic>odom</odom_topic>
+      <tf_topic>tf</tf_topic>
+      <dimensions>3</dimensions>
+      <odom_publish_frequency>50</odom_publish_frequency>
+    </plugin>
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <topic>joint_states</topic>
+    </plugin>
+  </gazebo>
+  <gazebo>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FL_hip_joint</joint_name>
+      <topic>/model/go2w/joint/FL_hip/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FL_thigh_joint</joint_name>
+      <topic>/model/go2w/joint/FL_thigh/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FL_calf_joint</joint_name>
+      <topic>/model/go2w/joint/FL_calf/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FR_hip_joint</joint_name>
+      <topic>/model/go2w/joint/FR_hip/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FR_thigh_joint</joint_name>
+      <topic>/model/go2w/joint/FR_thigh/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>FR_calf_joint</joint_name>
+      <topic>/model/go2w/joint/FR_calf/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RL_hip_joint</joint_name>
+      <topic>/model/go2w/joint/RL_hip/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RL_thigh_joint</joint_name>
+      <topic>/model/go2w/joint/RL_thigh/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RL_calf_joint</joint_name>
+      <topic>/model/go2w/joint/RL_calf/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RR_hip_joint</joint_name>
+      <topic>/model/go2w/joint/RR_hip/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RR_thigh_joint</joint_name>
+      <topic>/model/go2w/joint/RR_thigh/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-position-controller-system"
+            name="gz::sim::systems::JointPositionController">
+      <joint_name>RR_calf_joint</joint_name>
+      <topic>/model/go2w/joint/RR_calf/cmd_pos</topic>
+      <p_gain>40</p_gain>
+      <i_gain>0</i_gain>
+      <d_gain>4</d_gain>
+      <cmd_max>10</cmd_max>
+      <cmd_min>-10</cmd_min>
+    </plugin>
+    <plugin filename="gz-sim-joint-controller-system"
+            name="gz::sim::systems::JointController">
+      <joint_name>FL_foot_joint</joint_name>
+      <use_velocity_command>true</use_velocity_command>
+      <use_position_command>false</use_position_command>
+      <p_gain>1.0</p_gain>
+      <i_gain>0.0</i_gain>
+      <d_gain>0.0</d_gain>
+      <topic>/model/go2w/joint/FL_wheel/cmd_vel</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-controller-system"
+            name="gz::sim::systems::JointController">
+      <joint_name>FR_foot_joint</joint_name>
+      <use_velocity_command>true</use_velocity_command>
+      <use_position_command>false</use_position_command>
+      <p_gain>1.0</p_gain>
+      <i_gain>0.0</i_gain>
+      <d_gain>0.0</d_gain>
+      <topic>/model/go2w/joint/FR_wheel/cmd_vel</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-controller-system"
+            name="gz::sim::systems::JointController">
+      <joint_name>RL_foot_joint</joint_name>
+      <use_velocity_command>true</use_velocity_command>
+      <use_position_command>false</use_position_command>
+      <p_gain>1.0</p_gain>
+      <i_gain>0.0</i_gain>
+      <d_gain>0.0</d_gain>
+      <topic>/model/go2w/joint/RL_wheel/cmd_vel</topic>
+    </plugin>
+    <plugin filename="gz-sim-joint-controller-system"
+            name="gz::sim::systems::JointController">
+      <joint_name>RR_foot_joint</joint_name>
+      <use_velocity_command>true</use_velocity_command>
+      <use_position_command>false</use_position_command>
+      <p_gain>1.0</p_gain>
+      <i_gain>0.0</i_gain>
+      <d_gain>0.0</d_gain>
+      <topic>/model/go2w/joint/RR_wheel/cmd_vel</topic>
+    </plugin>
+  </gazebo>

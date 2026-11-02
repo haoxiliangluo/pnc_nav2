@@ -18,6 +18,7 @@ set(dependencies
 add_library(fake_trot_locomotion SHARED
   src/fake_trot_locomotion.cpp
   src/trot_gait_locomotion.cpp
+  src/wheel_legged_locomotion.cpp
 )
 target_include_directories(fake_trot_locomotion PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

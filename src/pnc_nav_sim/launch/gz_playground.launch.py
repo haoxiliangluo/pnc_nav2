@@ -14,6 +14,8 @@ from launch.actions import (
     IncludeLaunchDescription,
     OpaqueFunction,
 )
+from launch.conditions import IfCondition
+from launch.substitutions import PythonExpression
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -38,6 +40,8 @@ def _materialize_robot_urdf(xacro_path: str, mesh_search_path: str = '',
                     return 'file://' + candidate + '/'
             return match.group(0)
         robot_description = re.sub(r'package://([^/]+)/', _replace, robot_description)
+        # 有些模型用 model://（gz 资源路径），同样落成绝对路径，避免依赖 GZ_SIM_RESOURCE_PATH
+        robot_description = re.sub(r'model://([^/]+)/', _replace, robot_description)
 
     # 追加 gz 插件块（例如 12 个关节位置控制器）
     if append_gazebo_file:
@@ -145,6 +149,11 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        AppendEnvironmentVariable(
+            'GZ_SIM_RESOURCE_PATH',
+            LaunchConfiguration('mesh_search_path'),
+            condition=IfCondition(PythonExpression([
+                "'", LaunchConfiguration('mesh_search_path'), "' != ''"]))),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         DeclareLaunchArgument('robot_name', default_value='pnc_diff_drive'),
         DeclareLaunchArgument(

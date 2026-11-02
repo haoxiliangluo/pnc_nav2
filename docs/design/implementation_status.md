@@ -27,6 +27,7 @@
 | （未在架构图中）`pnc_nav_locomotion` | — | ✅ 新增 | 运动层：FakeTrot + **IK walk/trot 步态**；`cmd_vel → /joint_commands → gz 关节`（开环） |
 | （新增仿真资产）`quadruped.urdf.xacro` | — | 🟡 极简四足 | 4 腿 × 3 关节 + JointPositionController（对照用） |
 | （新增仿真资产）`go2_description`（vendored） | — | ✅ 开源模型 | Unitree 官方 Go2 模型（BSD），配 gz 关节位置控制器 |
+| （新增仿真资产）`go2w_description`（vendored） | — | ✅ 开源模型 | Unitree 官方 Go2-W 轮足模型；`sim_go2w` 闭环可用 |
 
 **`third_party/`**：实际只有 `cartographer`、`cartographer_ros`、`turtlebot3*`、`simdog_go2`（submodule，指向作者本地路径，克隆后为空）。
 架构图里写的 `octomap/`、`grid_map/`、`unitree_ros2/` **不存在**。

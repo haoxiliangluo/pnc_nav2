@@ -206,7 +206,10 @@
 | ❌ 未达到 | **有效推进**：命令 0.1–0.15 m/s 时，机身在 5–6s 内只位移 0.1–0.2m（≈0.02–0.03 m/s），脚端明显打滑；加大步幅/增益后又会把机器人"踢翻"（roll≈180°） |
 | 已排除 | IK 符号（URDF +y 旋转使足端向 -x，已改为 `atan2(-foot_x, r)`）、指令斜率（3–4 rad/s）、增益（p40/d4/cmd10 最稳，p200/cmd30 必翻）、出生高度（0.40→0.55） |
 | 调参经验 | gz `JointPositionController`：`p_gain>60 + cmd_max>15` 起步必翻；`cmd_max<10` 或 `p_gain<30` 又托不住身体。开环 IK 步态对参数极敏感 |
-| 建议 | ① **接 CHAMP**（apt 已有 `gz_ros2_control 1.2.20` / `ros2_control 4.48`，动作/里程计接口也现成）；② 或改用轮足模型（Go2-W，`go2w_description`）绕开步态；③ 若只为毕业论文，可把四足定位在"接口与模型链路验证"，推进能力用轮式平台承担 |
+| 转机（已采纳轮足方案） | 已接入 **Go2-W**（`go2w_description`，轮足）：腿保持站立位、4 个轮子差速驱动。`profile:=sim_go2w` 下 **1m 目标成功**（DWA，48.3s/1.80m） |
+| 轮足关键参数 | `body_height=0.34`（0.30 时轮子蹭地不转向）、`wheel_radius=0.057`（实测标定）、
+`linear_scale=1.15` / `angular_scale=1.75`（补偿滑移）、tracker 用 **DWA** 且 `goal_tolerance_dist=0.25` |
+| 足式步态建议 | 若要真足式行走：接 CHAMP（apt 已有 `gz_ros2_control`/`ros2_control`）或做接触/平衡闭环；开环 IK 步态在 gz 里推进不可靠（已实测） |
 | 相关 | `profile:=sim_go2` 可跑通 nav→cmd_vel→关节→odom 链路，但行走精度不足，不建议作为导航性能实验平台 |
 
 ### KI-019 坡面高程空洞 → 假台阶（DWA+地形 拒绝上坡）
@@ -330,3 +333,4 @@ void AStar2D::cleanup() {
 | 2026-10-23 | KI-021 更新：已换用官方 go2_description 模型（仍无真步态/odom） |
 | 2026-10-23 | 四足：IK walk/trot 步态 + odom + sim_go2 闭环；walk 可站立/慢走，闭环精度与 trot 稳定性待调 |
 | 2026-10-23 | 修正 IK 符号与增益后：站立稳定（z 0.19/roll -4°），但开环步态推进仍不可靠 → 建议接 CHAMP 或换轮足 |
+| 2026-10-23 | 采纳轮足方案：Go2-W 模型 + 轮速控制 + 标定 + DWA，`sim_go2w` 1m 目标成功 |

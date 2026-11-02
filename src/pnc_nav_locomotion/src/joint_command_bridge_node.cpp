@@ -23,6 +23,7 @@ public:
   {
     prefix_ = declare_parameter<std::string>("joint_bridge.prefix", "/model/quad/joint");
     suffix_ = declare_parameter<std::string>("joint_bridge.suffix", "/cmd_pos");
+    wheel_suffix_ = declare_parameter<std::string>("joint_bridge.wheel_suffix", "/cmd_vel");
     input_topic_ = declare_parameter<std::string>("joint_bridge.input_topic", "joint_commands");
 
     sub_ = create_subscription<pnc_nav_interfaces::msg::JointCommands>(
@@ -40,14 +41,19 @@ private:
     const size_t n = std::min(msg->joint_names.size(), msg->positions.size());
     for (size_t i = 0; i < n; ++i) {
       const std::string & name = msg->joint_names[i];
-      auto it = pubs_.find(name);
+      // 轮子用速度指令（cmd_vel），其它关节用位置指令（cmd_pos）
+      const bool is_wheel = name.find("wheel") != std::string::npos;
+      const std::string topic = prefix_ + "/" + name + (is_wheel ? wheel_suffix_ : suffix_);
+
+      auto it = pubs_.find(topic);
       if (it == pubs_.end()) {
         it = pubs_.emplace(
-          name, create_publisher<std_msgs::msg::Float64>(
-            prefix_ + "/" + name + suffix_, rclcpp::QoS(10))).first;
+          topic, create_publisher<std_msgs::msg::Float64>(topic, rclcpp::QoS(10))).first;
       }
       std_msgs::msg::Float64 value;
-      value.data = msg->positions[i];
+      value.data = is_wheel
+        ? (i < msg->velocities.size() ? msg->velocities[i] : 0.0)
+        : msg->positions[i];
       it->second->publish(value);
     }
 
@@ -62,6 +68,7 @@ private:
 
   std::string prefix_;
   std::string suffix_;
+  std::string wheel_suffix_;
   std::string input_topic_;
   size_t frame_{0};
   std::unordered_map<std::string, rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr> pubs_;

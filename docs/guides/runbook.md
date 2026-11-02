@@ -34,7 +34,9 @@
 | `pnc_nav_locomotion/locomotion.launch.py` | 运动层：`/cmd_vel → /joint_commands`（FakeTrot 假步态插件） | ✅ 骨架可用 |
 | `pnc_nav_locomotion/quadruped_demo.launch.py` | 四足链路 demo（极简盒子四足模型） | ✅ 可用 |
 | `pnc_nav_locomotion/go2_demo.launch.py` | **Go2 链路 demo**：开源 `go2_description` + 运动层（IK walk 步态）+ 关节桥 | ✅ 可用（开环） |
-| `bringup.launch.py profile:=sim_go2` | **四足导航闭环**：Go2 + 地图 + nav_server + 运动层 + odom（`robot_frame=base`） | 🟡 链路通，闭环精度待调 |
+| `bringup.launch.py profile:=sim_go2` | 四足（足式）闭环：Go2 + 运动层 + odom | 🟡 链路通，足式推进不足 |
+| `bringup.launch.py profile:=sim_go2w` | **轮足导航闭环（推荐）**：Go2-W + DWA + 运动层（腿站立/轮差速） | ✅ 可用（1m 目标成功） |
+| `pnc_nav_locomotion/go2w_demo.launch.py` | 轮足链路 demo：模型 + 运动层 + 关节/轮速桥 | ✅ 可用 |
 | `./scripts/run_all_tests.sh [--sim]` | 一键回归：构建 + 30 个 gtest（+ 仿真冒烟） | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
@@ -156,6 +158,21 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 > 经验（踩坑记录）：gz `JointPositionController` 用 `p_gain=40 / d_gain=4 / cmd_max=10`
 > 时最稳（能站立）；`p_gain≥80 + cmd_max≥20` 起步必翻；但 `cmd_max` 小于 10 也托不住身体。
 > 开环 IK 步态在 gz 里推进不可靠（脚端打滑），真步态建议接 CHAMP（见 known_issues KI-021）。
+
+### 3.2f1 `locomotion.*`（WheelLeggedLocomotion，轮足）
+
+`config/locomotion_go2w.yaml`：
+
+| 参数 | 现值 | 说明 |
+|---|---|---|
+| `body_height` | 0.34 | 站立高度（**0.30 时小腿/轮子容易蹭地，转向几乎不动**） |
+| `wheel_radius` | 0.057 | 实测标定值（名义 0.09 与实际差很多） |
+| `track` | 0.35 | 左右轮距（m） |
+| `linear_scale` / `angular_scale` | 1.15 / 1.75 | 实测标定（补偿滑移：0.3 命令→0.26 实际；0.6 rad/s→0.34 实际） |
+| `max_linear` / `max_wheel_speed` | 0.6 / 25 | 限幅 |
+
+> 轮足平台在 `sim_go2w` profile 里默认用 **DWA**（PP 追前视点会过冲/卡住），并放宽
+> `goal_tolerance_dist=0.25`、`min_linear_vel=0.10`。
 
 ### 3.2f2 `locomotion.*`（FakeTrot 参数）
 
@@ -396,3 +413,4 @@ colcon build --symlink-install --packages-select \
 | 2026-10-23 | 新增运动层骨架 `pnc_nav_locomotion`、`sim2d_amcl` profile、一键回归脚本 |
 | 2026-10-23 | 新增 `sim2d_cartographer` 建图 profile、极简四足模型与 `quadruped_demo` 链路 |
 | 2026-10-23 | 接入开源 `go2_description`（Unitree 官方模型）+ `go2_demo` 链路 |
+| 2026-10-23 | 接入 `go2w_description`（轮足）+ `sim_go2w` 闭环（DWA，1m 目标成功） |

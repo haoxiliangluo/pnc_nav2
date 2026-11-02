@@ -27,6 +27,8 @@ PROFILES = {
     'sim3d_elevation':  {'kind': 'sim3d', 'scan': '',         'cloud': 'points', 'elevation': 'true'},
     'sim_go2':          {'kind': 'sim_go2', 'scan': '',       'cloud': '',
                          'elevation': 'false'},
+    'sim_go2w':         {'kind': 'sim_go2w', 'scan': '',      'cloud': '',
+                         'elevation': 'false'},
     'sim2d_amcl':       {'kind': 'sim2d_amcl', 'scan': 'nav_scan', 'cloud': '',   'elevation': 'false'},
     'sim2d_cartographer': {'kind': 'sim2d_cartographer', 'scan': 'nav_scan', 'cloud': '',
                            'elevation': 'false'},
@@ -51,10 +53,13 @@ def _launch_setup(context, *args, **kwargs):
 
     localization = LaunchConfiguration('localization').perform(context)
 
-    if profile['kind'] == 'sim_go2':
+    if profile['kind'] in ('sim_go2', 'sim_go2w'):
+        is_wheeled = profile['kind'] == 'sim_go2w'
+        robot_ns = 'go2w' if is_wheeled else 'go2'
         actions.append(IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution([
-                FindPackageShare('pnc_nav_sim'), 'launch', 'gz_go2.launch.py'])),
+                FindPackageShare('pnc_nav_sim'), 'launch',
+                'gz_go2w.launch.py' if is_wheeled else 'gz_go2.launch.py'])),
             launch_arguments={
                 'use_sim_time': use_sim_time,
                 'use_gui': use_gui,
@@ -91,6 +96,20 @@ def _launch_setup(context, *args, **kwargs):
                 {'robot_frame': 'base'},
                 {'local_costmap.scan_topic': ''},
                 {'local_costmap.cloud_topic': ''},
+                # 轮足平台：速度/转向能力有限，跟踪器放慢；命中"轮足"才覆盖
+                {'path_tracker.max_linear_vel': 0.25 if is_wheeled else 0.30},
+                {'path_tracker.max_angular_vel': 0.8 if is_wheeled else 1.0},
+                {'path_tracker.lookahead_distance': 0.6 if is_wheeled else 0.8},
+                {'path_tracker.min_linear_vel': 0.10 if is_wheeled else 0.03},
+                {'goal_tolerance_dist': 0.25 if is_wheeled else 0.15},
+                # 轮足用 DWA（转向更平滑，不像 PP 那样追前视点）
+                {'local_planner_plugin':
+                    'pnc_nav_planners::DWA2D' if is_wheeled else ''},
+                {'path_tracker_plugin':
+                    '' if is_wheeled else 'pnc_nav_planners::PurePursuit2D'},
+                {'local_planner.max_vel_x': 0.25},
+                {'local_planner.max_vel_theta': 0.8},
+                {'progress_timeout': 12.0 if is_wheeled else 8.0},
             ],
         ))
         actions.append(Node(
@@ -98,14 +117,15 @@ def _launch_setup(context, *args, **kwargs):
             name='locomotion', output='screen',
             parameters=[
                 PathJoinSubstitution([
-                    FindPackageShare('pnc_nav_locomotion'), 'config', 'locomotion_go2.yaml']),
+                    FindPackageShare('pnc_nav_locomotion'), 'config',
+                    'locomotion_go2w.yaml' if is_wheeled else 'locomotion_go2.yaml']),
                 {'use_sim_time': use_sim_time},
             ],
         ))
         actions.append(Node(
             package='pnc_nav_locomotion', executable='joint_command_bridge_node',
             name='joint_command_bridge', output='screen',
-            parameters=[{'joint_bridge.prefix': '/model/go2/joint'},
+            parameters=[{'joint_bridge.prefix': '/model/' + robot_ns + '/joint'},
                         {'use_sim_time': use_sim_time}],
         ))
     elif profile['kind'] == 'sim2d_cartographer':
@@ -218,7 +238,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('profile', default_value='sim2d',
                               description='sim2d | sim2d_amcl | sim2d_cartographer | sim3d | '
-                                          'sim3d_elevation | sim_go2 | real'),
+                                          'sim3d_elevation | sim_go2 | sim_go2w | real'),
         DeclareLaunchArgument('localization', default_value='static',
                               description='static（固定 map->odom）| amcl（AMCL 提供 map->odom）'),
         DeclareLaunchArgument('initial_pose_x', default_value='0.0'),

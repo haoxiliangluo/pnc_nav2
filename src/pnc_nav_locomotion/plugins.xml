@@ -7,4 +7,8 @@
          base_class_type="pnc_nav_core::LocomotionControllerBase">
     <description>解析 IK 小跑步态（Go2 尺寸，开环）</description>
   </class>
+  <class type="pnc_nav_locomotion::WheelLeggedLocomotion"
+         base_class_type="pnc_nav_core::LocomotionControllerBase">
+    <description>轮足（Go2-W）：腿站立 + 轮子差速</description>
+  </class>
 </library>
