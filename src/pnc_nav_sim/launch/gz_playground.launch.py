@@ -149,11 +149,6 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        AppendEnvironmentVariable(
-            'GZ_SIM_RESOURCE_PATH',
-            LaunchConfiguration('mesh_search_path'),
-            condition=IfCondition(PythonExpression([
-                "'", LaunchConfiguration('mesh_search_path'), "' != ''"]))),
         DeclareLaunchArgument('use_sim_time', default_value='true'),
         DeclareLaunchArgument('robot_name', default_value='pnc_diff_drive'),
         DeclareLaunchArgument(
