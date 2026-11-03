@@ -99,6 +99,14 @@ void ElevationMap::fillUnknown(double radius_m)
         continue;
       }
 
+      // 邻域高度跨度太大（跨台阶/崖边，或远处被遮挡只看到一部分表面）：不填，
+      // 保持未知让上层回退静态图，避免把平台填成地面 → 被判不可通行
+      if (std::isfinite(lowest) && std::isfinite(highest) &&
+        (highest - lowest) > fill_max_height_spread_)
+      {
+        continue;
+      }
+
       double filled = lowest;
       if (n >= 3) {
         // 解 3x3 正规方程：z = a*x + b*y + c

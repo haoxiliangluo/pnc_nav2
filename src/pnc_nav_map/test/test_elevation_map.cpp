@@ -141,3 +141,24 @@ TEST(ElevationMap, HoleInRampIsFilledAlongSurface)   // KI-019 回归
   EXPECT_NEAR(t.slope_rad * 180.0 / M_PI, 15.0, 5.0);
   EXPECT_GT(t.score, 0.3);
 }
+
+TEST(ElevationMap, FillSkipsCellsAcrossBigHeightSpread)   // KI-019：跨台阶/崖边不填
+{
+  // 左半地面 z=0，右半平台 z=0.8：中间未知格邻域高度跨度 0.8 > 阈值 → 不填，保持未知
+  ElevationMap map(0.1, 0.0, 0.0, 20, 10);
+  for (int mx = 0; mx < map.width(); ++mx) {
+    for (int my = 0; my < map.height(); ++my) {
+      const double x = map.originX() + (mx + 0.5) * map.resolution();
+      const double y = map.originY() + (my + 0.5) * map.resolution();
+      if (x > 0.8 && x < 1.1) {
+        continue;   // 中间留空（模拟台阶边缘/遮挡）
+      }
+      map.addPoint(x, y, x > 1.1 ? 0.8 : 0.0);
+    }
+  }
+
+  map.fillUnknown(0.4);
+  double z = 0.0;
+  EXPECT_FALSE(map.getGroundHeight(0.95, 0.5, z));   // 跨崖边的格保持未知
+  EXPECT_TRUE(map.getGroundHeight(0.15, 0.5, z));    // 平地内部照常
+}

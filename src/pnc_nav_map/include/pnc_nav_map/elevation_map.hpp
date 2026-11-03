@@ -54,6 +54,10 @@ public:
   /// 平面拟合填充的残差上限（m），超过则退回"最低 z"
   void setFillPlanarMaxRms(double rms) {fill_planar_max_rms_ = rms;}
 
+  /// 填充时允许的邻域高度跨度（m）：超过说明邻域跨了台阶/崖边（或数据不可靠），
+  /// 此时**不填**、保持未知，让上层回退到静态地图（KI-019：远距离平台被误填成地面）
+  void setFillMaxHeightSpread(double spread) {fill_max_height_spread_ = std::max(0.0, spread);}
+
   bool worldToCell(double x, double y, int & mx, int & my) const;
   bool inBounds(double x, double y) const;
 
@@ -101,6 +105,7 @@ private:
   double origin_y_{0.0};
   int slope_baseline_cells_{2};
   double fill_planar_max_rms_{0.05};
+  double fill_max_height_spread_{0.35};
   int width_{0};
   int height_{0};
   std::vector<Cell> cells_;

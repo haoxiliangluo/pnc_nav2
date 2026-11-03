@@ -14,6 +14,7 @@ elevation_map_node:
       max_z: 1.50                  # 高度带上限
       recenter_threshold: 1.0      # 机器人移动超过它才滚动窗口 (m)
       fill_radius: 0.8             # 未知格填充半径（需 >= robot_clear_radius）
+      fill_max_height_spread: 0.35 # 填充允许的邻域高度跨度 (m)：超过则不填（保持未知→回退静态图）
       robot_clear_radius: 0.7      # 机器人自身半径内的点直接丢弃（车体+轮子约 0.5m，留余量）
       slope_baseline_cells: 2      # 求坡度基线（格）：2≈0.2m，抑制 16 线激光噪声
       slope_max_deg: 25.0          # 可通行性阈值：坡度（15° 缓坡要能过，25° 以上判不可通行）

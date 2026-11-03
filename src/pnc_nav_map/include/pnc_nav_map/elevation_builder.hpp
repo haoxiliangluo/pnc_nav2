@@ -35,6 +35,7 @@ struct ElevationBuilderParams
   double fill_radius{0.8};       // 未知格填充半径 (m)，需 >= robot_clear_radius 才能补上自身清除区
   double robot_clear_radius{0.7}; // 机器人自身半径内的点直接丢弃（车体+轮子约 0.5m，留余量）
   int slope_baseline_cells{2};    // 求坡度的基线（格），2≈0.2m，越大越平滑
+  double fill_max_height_spread{0.35};// 填充允许的邻域高度跨度 (m)，超过则不填
   TraversabilityParams trav;     // 可通行性阈值
 };
 
