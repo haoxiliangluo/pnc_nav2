@@ -206,7 +206,7 @@
 | ❌ 未达到 | **有效推进**：命令 0.1–0.15 m/s 时，机身在 5–6s 内只位移 0.1–0.2m（≈0.02–0.03 m/s），脚端明显打滑；加大步幅/增益后又会把机器人"踢翻"（roll≈180°） |
 | 已排除 | IK 符号（URDF +y 旋转使足端向 -x，已改为 `atan2(-foot_x, r)`）、指令斜率（3–4 rad/s）、增益（p40/d4/cmd10 最稳，p200/cmd30 必翻）、出生高度（0.40→0.55） |
 | 调参经验 | gz `JointPositionController`：`p_gain>60 + cmd_max>15` 起步必翻；`cmd_max<10` 或 `p_gain<30` 又托不住身体。开环 IK 步态对参数极敏感 |
-| 转机（已采纳轮足方案） | 已接入 **Go2-W**（`go2w_description`，轮足）：腿保持站立位、4 个轮子差速驱动。`profile:=sim_go2w` 下 **1m 目标成功**（DWA，48.3s/1.80m） |
+| 转机（已采纳轮足方案） | 已接入 **Go2-W**（`go2w_description`，轮足）：腿保持站立位、4 个轮子差速驱动。`profile:=sim_go2w` 下 1m 目标成功（DWA）；**加速度闭环后 48.3s/1.80m → 4.96s/1.08m** |
 | 轮足关键参数 | `body_height=0.34`（0.30 时轮子蹭地不转向）、`wheel_radius=0.057`（实测标定）、
 `linear_scale=1.15` / `angular_scale=1.75`（补偿滑移）、tracker 用 **DWA** 且 `goal_tolerance_dist=0.25` |
 | 足式步态建议 | 若要真足式行走：接 CHAMP（apt 已有 `gz_ros2_control`/`ros2_control`）或做接触/平衡闭环；开环 IK 步态在 gz 里推进不可靠（已实测） |
@@ -309,7 +309,7 @@
 | ❌ 未达到 | **有效推进**：命令 0.1–0.15 m/s 时，机身在 5–6s 内只位移 0.1–0.2m（≈0.02–0.03 m/s），脚端明显打滑；加大步幅/增益后又会把机器人"踢翻"（roll≈180°） |
 | 已排除 | IK 符号（URDF +y 旋转使足端向 -x，已改为 `atan2(-foot_x, r)`）、指令斜率（3–4 rad/s）、增益（p40/d4/cmd10 最稳，p200/cmd30 必翻）、出生高度（0.40→0.55） |
 | 调参经验 | gz `JointPositionController`：`p_gain>60 + cmd_max>15` 起步必翻；`cmd_max<10` 或 `p_gain<30` 又托不住身体。开环 IK 步态对参数极敏感 |
-| 转机（已采纳轮足方案） | 已接入 **Go2-W**（`go2w_description`，轮足）：腿保持站立位、4 个轮子差速驱动。`profile:=sim_go2w` 下 **1m 目标成功**（DWA，48.3s/1.80m） |
+| 转机（已采纳轮足方案） | 已接入 **Go2-W**（`go2w_description`，轮足）：腿保持站立位、4 个轮子差速驱动。`profile:=sim_go2w` 下 1m 目标成功（DWA）；**加速度闭环后 48.3s/1.80m → 4.96s/1.08m** |
 | 轮足关键参数 | `body_height=0.34`（0.30 时轮子蹭地不转向）、`wheel_radius=0.057`（实测标定）、
 `linear_scale=1.15` / `angular_scale=1.75`（补偿滑移）、tracker 用 **DWA** 且 `goal_tolerance_dist=0.25` |
 | 足式步态建议 | 若要真足式行走：接 CHAMP（apt 已有 `gz_ros2_control`/`ros2_control`）或做接触/平衡闭环；开环 IK 步态在 gz 里推进不可靠（已实测） |
@@ -412,7 +412,7 @@
 | ❌ 未达到 | **有效推进**：命令 0.1–0.15 m/s 时，机身在 5–6s 内只位移 0.1–0.2m（≈0.02–0.03 m/s），脚端明显打滑；加大步幅/增益后又会把机器人"踢翻"（roll≈180°） |
 | 已排除 | IK 符号（URDF +y 旋转使足端向 -x，已改为 `atan2(-foot_x, r)`）、指令斜率（3–4 rad/s）、增益（p40/d4/cmd10 最稳，p200/cmd30 必翻）、出生高度（0.40→0.55） |
 | 调参经验 | gz `JointPositionController`：`p_gain>60 + cmd_max>15` 起步必翻；`cmd_max<10` 或 `p_gain<30` 又托不住身体。开环 IK 步态对参数极敏感 |
-| 转机（已采纳轮足方案） | 已接入 **Go2-W**（`go2w_description`，轮足）：腿保持站立位、4 个轮子差速驱动。`profile:=sim_go2w` 下 **1m 目标成功**（DWA，48.3s/1.80m） |
+| 转机（已采纳轮足方案） | 已接入 **Go2-W**（`go2w_description`，轮足）：腿保持站立位、4 个轮子差速驱动。`profile:=sim_go2w` 下 1m 目标成功（DWA）；**加速度闭环后 48.3s/1.80m → 4.96s/1.08m** |
 | 轮足关键参数 | `body_height=0.34`（0.30 时轮子蹭地不转向）、`wheel_radius=0.057`（实测标定）、
 `linear_scale=1.15` / `angular_scale=1.75`（补偿滑移）、tracker 用 **DWA** 且 `goal_tolerance_dist=0.25` |
 | 足式步态建议 | 若要真足式行走：接 CHAMP（apt 已有 `gz_ros2_control`/`ros2_control`）或做接触/平衡闭环；开环 IK 步态在 gz 里推进不可靠（已实测） |
