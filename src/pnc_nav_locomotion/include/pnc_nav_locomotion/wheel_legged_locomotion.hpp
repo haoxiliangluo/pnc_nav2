@@ -53,6 +53,10 @@ private:
   double max_wheel_speed_{25.0};
   double linear_scale_{1.0};    // 线速度标定系数（补偿滑移）
   double angular_scale_{1.0};   // 角速度标定系数（补偿转向滑移）
+  bool use_velocity_feedback_{true};// 是否用实测速度做闭环补偿
+  double velocity_gain_{2.0};   // 补偿增益
+  double comp_linear_{1.0};     // 线速度补偿状态
+  double comp_angular_{1.0};    // 角速度补偿状态
 
   double stand_thigh_{0.0};
   double stand_calf_{0.0};

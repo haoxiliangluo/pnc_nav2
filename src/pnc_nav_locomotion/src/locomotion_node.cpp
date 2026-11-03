@@ -15,6 +15,8 @@
 #include "std_srvs/srv/trigger.hpp"
 
 #include "pnc_nav_core/controller_base.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+
 #include "pnc_nav_interfaces/msg/joint_commands.hpp"
 
 namespace pnc_nav_locomotion
@@ -31,6 +33,7 @@ public:
     cmd_vel_timeout_ = declare_parameter<double>("locomotion.cmd_vel_timeout", 0.5);
     joint_topic_ = declare_parameter<std::string>("locomotion.joint_topic", "joint_commands");
     cmd_topic_ = declare_parameter<std::string>("locomotion.cmd_vel_topic", "cmd_vel");
+    odom_topic_ = declare_parameter<std::string>("locomotion.odom_topic", "odom");
 
     loader_ = std::make_unique<pluginlib::ClassLoader<pnc_nav_core::LocomotionControllerBase>>(
       "pnc_nav_core", "pnc_nav_core::LocomotionControllerBase");
@@ -57,6 +60,11 @@ public:
       });
 
     joint_pub_ = create_publisher<pnc_nav_interfaces::msg::JointCommands>(joint_topic_, 10);
+
+    // 速度反馈：插件可以用 RobotState 里的实测速度做闭环补偿
+    odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
+      odom_topic_, rclcpp::QoS(20),
+      [this](nav_msgs::msg::Odometry::SharedPtr msg) {odom_ = *msg;});
 
     using Trigger = std_srvs::srv::Trigger;
     estop_srv_ = create_service<Trigger>(
@@ -94,7 +102,10 @@ private:
     if (!controller_) {
       return;
     }
-    pnc_nav_core::RobotState state;   // 骨架版：未接 /joint_states，先给零状态
+    pnc_nav_core::RobotState state;
+    state.linear_vel_x = odom_.twist.twist.linear.x;
+    state.linear_vel_y = odom_.twist.twist.linear.y;
+    state.angular_vel_z = odom_.twist.twist.angular.z;
     pnc_nav_interfaces::msg::JointCommands msg;
 
     if (estop_) {
@@ -134,17 +145,20 @@ private:
   std::string instance_name_;
   std::string joint_topic_;
   std::string cmd_topic_;
+  std::string odom_topic_;
   double cmd_vel_timeout_{0.5};
 
   std::unique_ptr<pluginlib::ClassLoader<pnc_nav_core::LocomotionControllerBase>> loader_;
   pnc_nav_core::LocomotionControllerBase::SharedPtr controller_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   rclcpp::Publisher<pnc_nav_interfaces::msg::JointCommands>::SharedPtr joint_pub_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr estop_srv_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_srv_;
   rclcpp::TimerBase::SharedPtr timer_;
 
   geometry_msgs::msg::Twist cmd_;
+  nav_msgs::msg::Odometry odom_;
   std::chrono::steady_clock::time_point last_cmd_{};
   bool estop_{false};
 };

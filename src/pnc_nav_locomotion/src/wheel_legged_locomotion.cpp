@@ -44,6 +44,9 @@ void WheelLeggedLocomotion::configure(
     name_ + ".max_wheel_speed", max_wheel_speed_);
   linear_scale_ = node_->declare_parameter<double>(name_ + ".linear_scale", linear_scale_);
   angular_scale_ = node_->declare_parameter<double>(name_ + ".angular_scale", angular_scale_);
+  use_velocity_feedback_ = node_->declare_parameter<bool>(
+    name_ + ".use_velocity_feedback", use_velocity_feedback_);
+  velocity_gain_ = node_->declare_parameter<double>(name_ + ".velocity_gain", velocity_gain_);
 
   frequency_ = std::max(10.0, frequency_);
   body_height_ = std::clamp(body_height_, 0.15, thigh_length_ + calf_length_ - 0.01);
@@ -79,7 +82,7 @@ void WheelLeggedLocomotion::solveLegIk(
 
 pnc_nav_core::JointCommands WheelLeggedLocomotion::computeJointCommands(
   const geometry_msgs::msg::Twist & cmd_vel,
-  const pnc_nav_core::RobotState & /*current_state*/)
+  const pnc_nav_core::RobotState & current_state)
 {
   pnc_nav_core::JointCommands out;
   out.joint_names.assign(kJointNames, kJointNames + kTotalJoints);
@@ -96,9 +99,34 @@ pnc_nav_core::JointCommands WheelLeggedLocomotion::computeJointCommands(
   }
 
   // 轮：差速（速度控制）
-  // 标定：cmd 0.3 → 实测 0.26（×1.15）；cmd 0.6 rad/s → 实测 0.34（×1.75）
-  const double vx = std::clamp(cmd_vel.linear.x * linear_scale_, -max_linear_, max_linear_);
-  const double wz = std::clamp(cmd_vel.angular.z * angular_scale_, -1.5, 1.5);
+  // 前馈标定 + 可选闭环补偿：
+  // 前馈：cmd 0.3 → 实测 0.26（×1.15）；cmd 0.6 rad/s → 实测 0.34（×1.75）
+  const double dt = 1.0 / std::max(10.0, frequency_);
+  if (use_velocity_feedback_) {
+    const double vx_cmd = cmd_vel.linear.x;
+    const double wz_cmd = cmd_vel.angular.z;
+
+    if (std::abs(vx_cmd) > 1e-3) {
+      const double err = vx_cmd - current_state.linear_vel_x;
+      comp_linear_ += velocity_gain_ * err * dt / std::max(0.10, std::abs(vx_cmd));
+      comp_linear_ = std::clamp(comp_linear_, 0.5, 3.0);
+    } else {
+      comp_linear_ = 1.0;
+    }
+
+    if (std::abs(wz_cmd) > 1e-3) {
+      const double err = wz_cmd - current_state.angular_vel_z;
+      comp_angular_ += velocity_gain_ * err * dt / std::max(0.20, std::abs(wz_cmd));
+      comp_angular_ = std::clamp(comp_angular_, 0.5, 4.0);
+    } else {
+      comp_angular_ = 1.0;
+    }
+  }
+
+  const double vx = std::clamp(
+    cmd_vel.linear.x * linear_scale_ * comp_linear_, -max_linear_, max_linear_);
+  const double wz = std::clamp(
+    cmd_vel.angular.z * angular_scale_ * comp_angular_, -1.5, 1.5);
   const double v_left = vx - wz * track_ * 0.5;
   const double v_right = vx + wz * track_ * 0.5;
   const double w_left = std::clamp(v_left / wheel_radius_, -max_wheel_speed_, max_wheel_speed_);

@@ -18,3 +18,6 @@ locomotion:
       max_wheel_speed: 25.0
       linear_scale: 1.15       # 实测标定（0.3 命令 → 0.26 实际）
       angular_scale: 1.75      # 实测标定（0.6 命令 → 0.34 实际）
+      use_velocity_feedback: true   # 用 /odom 实测速度做闭环补偿
+      velocity_gain: 2.0            # 补偿增益
+      odom_topic: "odom"

@@ -168,7 +168,9 @@ ros2 launch pnc_nav_bringup gz_sim_2d_bringup.launch.py params_file:=/tmp/nav_pa
 | `body_height` | 0.34 | 站立高度（**0.30 时小腿/轮子容易蹭地，转向几乎不动**） |
 | `wheel_radius` | 0.057 | 实测标定值（名义 0.09 与实际差很多） |
 | `track` | 0.35 | 左右轮距（m） |
-| `linear_scale` / `angular_scale` | 1.15 / 1.75 | 实测标定（补偿滑移：0.3 命令→0.26 实际；0.6 rad/s→0.34 实际） |
+| `linear_scale` / `angular_scale` | 1.15 / 1.75 | 前馈标定（补偿滑移） |
+| `use_velocity_feedback` / `velocity_gain` | true / 2.0 | 用 `/odom` 实测速度做闭环补偿（实测 0.3→0.27 m/s、0.6→0.60 rad/s） |
+| `odom_topic` | `odom` | 速度反馈来源 |
 | `max_linear` / `max_wheel_speed` | 0.6 / 25 | 限幅 |
 
 > 轮足平台在 `sim_go2w` profile 里默认用 **DWA**（PP 追前视点会过冲/卡住），并放宽
