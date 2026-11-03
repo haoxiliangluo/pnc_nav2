@@ -152,8 +152,10 @@ void NavServer::initialize()
     traversability_costmap_ = std::make_shared<TraversabilityCostmapAdapter>(
       shared_from_this(), elevation_topic_, elevation_lethal_score_);
     global_costmap_ = std::make_shared<OverlayCostmap>(static_costmap_, traversability_costmap_);
-    // 局部规划器同样能看到地形（坡度/台阶）：局部窗口优先，缺数据回退激光层
-    local_planner_costmap_ = std::make_shared<OverlayCostmap>(local_costmap_, traversability_costmap_);
+    // 地形代价只用于**全局规划**（选路），不给局部规划器：
+    // 否则坡面的可通行性代价会被局部规划器当成"前进更贵"，宁愿停住（KI-019）。
+    // 局部规划器继续用滚动障碍窗口（纯障碍/膨胀），跟踪全局路径即可。
+    local_planner_costmap_ = local_costmap_;
     RCLCPP_INFO(
       get_logger(), "Global costmap: static + elevation(%s, lethal_score=%.2f)",
       elevation_topic_.c_str(), elevation_lethal_score_);
