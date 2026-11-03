@@ -362,18 +362,19 @@ double DWA2D::pathDistanceCost(const Trajectory & traj) const
     if(!costmap_ || traj.poses.empty())return std::numeric_limits<double>::max();
     for(auto & obs :traj.poses)
     {
-      if(costmap_->isOccupied(obs.pose.position.x,obs.pose.position.y,0.0))
+      // 硬/软代价分离（KI-019）：只有 LETHAL（254）才算"撞上了"，直接判轨迹非法；
+      // 地形/膨胀等软代价（0..253）只作为惩罚项参与评分，不能一票否决。
+      const double cost = costmap_->getCost(
+        obs.pose.position.x, obs.pose.position.y, 0.0);
+      if (cost >= static_cast<double>(pnc_nav_core::cost_values::LETHAL))
       {
         RCLCPP_INFO_THROTTLE(
           node_->get_logger(), *node_->get_clock(), 3000,
           "DWA2D: traj blocked at (%.2f, %.2f) cost=%.0f",
-          obs.pose.position.x, obs.pose.position.y,
-          costmap_->getCost(obs.pose.position.x, obs.pose.position.y, 0.0));
+          obs.pose.position.x, obs.pose.position.y, cost);
         return std::numeric_limits<double>::max();
       }
-
-      double cost = costmap_->getCost(obs.pose.position.x,obs.pose.position.y,0.0);
-      max_cost = std::max(max_cost,cost);
+      max_cost = std::max(max_cost, cost);
     }
     return max_cost;
   }
