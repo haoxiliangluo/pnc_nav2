@@ -1,0 +1,11 @@
+mission_executor:
+  ros__parameters:
+    use_sim_time: true
+    mission:
+      auto_start: false
+      loop: false
+      max_retries: 1
+      frame_id: "map"
+      tick_period: 0.2
+      # 坡道场景分段：坡底 → 坡中 → 平台（一次性到 6.4m 会因爬坡慢而超时）
+      waypoints: [1.5, 0.0, 2.5, 0.0, 3.5, 0.0]

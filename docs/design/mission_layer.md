@@ -103,7 +103,11 @@ ros2 service call /mission/cancel  std_srvs/srv/Trigger
 ros2 topic echo /mission_status
 ```
 
-实测：`[1,0] → [2,0] → [0.5,0]` 三点任务 `state=SUCCEEDED (3/3)`，**32.9s**（折返段 19.9s）；
+实测：
+- 平地点任务 `[1,0] → [2,0] → [0.5,0]`：`SUCCEEDED (3/3)`，32.9s（折返段 19.9s）
+- **坡道分段任务**（`config/mission_slope.yaml`：坡底 1.5 → 2.5 → 3.5，配合地形代价 + DWA）：
+  `SUCCEEDED (3/3)`，30.3s——验证"分段下发"能解决"一次性远目标爬坡超时"的问题；
+
 运行中 cancel → `state=CANCELLED`，导航 goal 返回 `code=5`（CANCELED），任务不推进。
 
 ---
