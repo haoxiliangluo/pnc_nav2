@@ -1,0 +1,102 @@
+{
+  "config": {
+    "name": "planner_comparison",
+    "profile": "sim2d",
+    "goal": [
+      2.0,
+      0.0
+    ],
+    "runs": 3,
+    "timeout": 120,
+    "cases": [
+      {
+        "name": "astar2d_purepursuit",
+        "params_file": ""
+      },
+      {
+        "name": "astar2d_dwa",
+        "params_file": "experiments/params/astar2d_dwa.yaml"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "case": "astar2d_purepursuit",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 9.088623263,
+      "distance_traveled": 1.9014983027543562,
+      "final_pose": [
+        1.9008503331075057,
+        0.04298548945561285
+      ]
+    },
+    {
+      "case": "astar2d_purepursuit",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 13.496201588,
+      "distance_traveled": 1.911076019821084,
+      "final_pose": [
+        1.906083812160316,
+        0.007895790672695392
+      ]
+    },
+    {
+      "case": "astar2d_purepursuit",
+      "run": 3,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 13.56048403,
+      "distance_traveled": 1.912831118433338,
+      "final_pose": [
+        1.9077568334985795,
+        0.008097616722185999
+      ]
+    },
+    {
+      "case": "astar2d_dwa",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 9.438622988,
+      "distance_traveled": 1.858240089712628,
+      "final_pose": [
+        1.8543427775487216,
+        0.02479309819341338
+      ]
+    },
+    {
+      "case": "astar2d_dwa",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 9.446571634,
+      "distance_traveled": 1.8572489980865905,
+      "final_pose": [
+        1.8532473865057753,
+        0.024333364366006128
+      ]
+    },
+    {
+      "case": "astar2d_dwa",
+      "run": 3,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 9.4924874,
+      "distance_traveled": 1.8643634954186454,
+      "final_pose": [
+        1.8603658812296096,
+        0.02474026944387051
+      ]
+    }
+  ]
+}

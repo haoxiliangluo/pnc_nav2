@@ -38,6 +38,25 @@
 
 ---
 
+## 2.5 实验（论文/报告用数据）
+
+```bash
+python3 scripts/experiment_runner.py experiments/planner_comparison.yaml   # 跑实验
+PYTHONNOUSERSITE=1 python3 scripts/plot_results.py experiments/results/<目录>  # 出图
+```
+
+- 配置在 `experiments/*.yaml`（profile / goal / runs / cases），结果落
+  `experiments/results/<时间戳>_<实验名>/`（runs.json + summary.csv + plot_*.png）
+- 首组基线（2D 平地、目标 (2,0)、各 3 次，全部成功）：
+
+| 用例 | 耗时 (s) | 里程 (m) |
+|---|---|---|
+| AStar2D + PurePursuit2D | 9.09 / 13.50 / 13.56 | 1.90 / 1.91 / 1.91 |
+| AStar2D + DWA2D | 9.44 / 9.45 / 9.49 | 1.86 / 1.86 / 1.86 |
+
+> DWA 更稳定（耗时方差小）；PP 有一次更快（9.09s）但波动大。
+> 注意：出图要用 `PYTHONNOUSERSITE=1`（`~/.local` 的 numpy 2.x 与系统 matplotlib 不兼容）。
+
 ## 3. 怎么加用例
 
 - **算法/策略** → 加 gtest（参考 `pnc_nav_map/test/` 与 `pnc_nav_task/test/`）

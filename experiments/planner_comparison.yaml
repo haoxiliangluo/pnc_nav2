@@ -1,0 +1,11 @@
+# 规划/跟踪器对比实验（2D 平地，同一地图/同一目标，多次重复）
+name: planner_comparison
+profile: sim2d
+goal: [2.0, 0.0]
+runs: 3
+timeout: 120
+cases:
+  - name: astar2d_purepursuit
+    params_file: ""                     # 默认：AStar2D + PurePursuit2D
+  - name: astar2d_dwa
+    params_file: experiments/params/astar2d_dwa.yaml

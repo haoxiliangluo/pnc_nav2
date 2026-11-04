@@ -1,0 +1,7 @@
+case,run,success,error_code,total_time,distance_traveled,message
+astar2d_purepursuit,1,True,0,9.088623263,1.9014983027543562,goal reached
+astar2d_purepursuit,2,True,0,13.496201588,1.911076019821084,goal reached
+astar2d_purepursuit,3,True,0,13.56048403,1.912831118433338,goal reached
+astar2d_dwa,1,True,0,9.438622988,1.858240089712628,goal reached
+astar2d_dwa,2,True,0,9.446571634,1.8572489980865905,goal reached
+astar2d_dwa,3,True,0,9.4924874,1.8643634954186454,goal reached
