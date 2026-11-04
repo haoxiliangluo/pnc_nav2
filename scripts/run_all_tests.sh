@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# PNC Nav2 一键回归：构建 + 单测（+ 可选仿真冒烟）
+# PNC Nav2 一键回归
 #
-#   ./scripts/run_all_tests.sh          # 构建 + 全部 gtest
-#   ./scripts/run_all_tests.sh --sim    # 额外跑仿真冒烟（可达/取消/不可达）
+#   ./scripts/run_all_tests.sh                # 构建 + 全部 gtest
+#   ./scripts/run_all_tests.sh --sim          # 追加 2D 导航冒烟（成功/取消/不可达）
+#   ./scripts/run_all_tests.sh --go2w         # 追加轮足 Go2-W 导航冒烟
+#   ./scripts/run_all_tests.sh --terrain      # 追加坡道分段任务冒烟（地形 + DWA）
+#   ./scripts/run_all_tests.sh --sim --go2w --terrain
 #
 # 退出码：0 全绿；1 有失败
 
@@ -11,7 +14,18 @@ set -o pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-MODE="${1:-}"
+RUN_SIM=0
+RUN_GO2W=0
+RUN_TERRAIN=0
+for arg in "$@"; do
+  case "$arg" in
+    --sim) RUN_SIM=1 ;;
+    --go2w) RUN_GO2W=1 ;;
+    --terrain) RUN_TERRAIN=1 ;;
+    -h|--help) grep '^#' "$0" | head -12; exit 0 ;;
+  esac
+done
+
 PACKAGES="pnc_nav_interfaces pnc_nav_core pnc_nav_planners pnc_nav_map \
 pnc_nav_task pnc_nav_locomotion pnc_nav_diagnostics pnc_nav_sim pnc_nav_bringup pnc_nav_examples"
 
@@ -22,6 +36,55 @@ source /opt/ros/jazzy/setup.bash
 export PATH="/opt/ros/jazzy/opt/gz_tools_vendor/bin:${PATH}"
 
 FAIL=0
+
+cleanup_procs() {
+  python3 - <<'PY'
+import os, signal
+me = os.getpid()
+def ancestors(p):
+    out = set()
+    while p and p != 1:
+        out.add(p)
+        try:
+            p = int(open(f'/proc/{p}/stat').read().split()[3])
+        except Exception:
+            break
+    return out
+skip = ancestors(me)
+for pid in os.listdir('/proc'):
+    if not pid.isdigit():
+        continue
+    pid = int(pid)
+    if pid in skip:
+        continue
+    try:
+        cmd = open(f'/proc/{pid}/cmdline', 'rb').read().decode(errors='ignore').replace('\0', ' ')
+    except Exception:
+        continue
+    if 'pnc_nav2/install' in cmd and 'grep' not in cmd:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except Exception:
+            pass
+PY
+  sleep 1
+}
+
+wait_ready() {
+  # 等 action server + TF（最多 90s）；$1 = 机器人基座 frame（默认 base_link）
+  local base_frame="${1:-base_link}"
+  for _ in $(seq 1 90); do
+    if ros2 action list 2>/dev/null | grep -q navigate_to_3d_pose; then
+      if timeout 2 ros2 run tf2_ros tf2_echo map "${base_frame}" 2>/dev/null | grep -q Translation; then
+        sleep 1
+        return 0
+      fi
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 echo "=== 1/3 构建（增量）==="
 if ! colcon build --symlink-install --packages-select ${PACKAGES} --parallel-workers 4 > /tmp/pnc_build.log 2>&1; then
   echo "构建失败，日志：/tmp/pnc_build.log"
@@ -60,80 +123,77 @@ for pkg, (t, fl) in sorted(per_pkg.items()):
 print(f'合计 {total} 例，失败 {failures} 例')
 sys.exit(0 if failures == 0 else 1)
 PY
-GTEST_RC=$?
-[ $GTEST_RC -ne 0 ] && FAIL=1
+[ $? -ne 0 ] && FAIL=1
 
-if [ "$MODE" = "--sim" ]; then
-  echo ""
-  echo "=== 3/3 仿真冒烟（profile:=sim2d）==="
+echo ""
+echo "=== 3/3 场景冒烟 ==="
 
-  # 清掉可能残留的本项目进程（只杀 pnc_nav2 install 路径下的）
-  python3 - <<'PY'
-import os, signal
-me = os.getpid()
-def ancestors(p):
-    out = set()
-    while p and p != 1:
-        out.add(p)
-        try:
-            p = int(open(f'/proc/{p}/stat').read().split()[3])
-        except Exception:
-            break
-    return out
-skip = ancestors(me)
-for pid in os.listdir('/proc'):
-    if not pid.isdigit():
-        continue
-    pid = int(pid)
-    if pid in skip:
-        continue
-    try:
-        cmd = open(f'/proc/{pid}/cmdline', 'rb').read().decode(errors='ignore').replace('\0', ' ')
-    except Exception:
-        continue
-    if 'pnc_nav2/install' in cmd and 'grep' not in cmd:
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except Exception:
-            pass
-PY
-  sleep 1
-
+if [ ${RUN_SIM} -eq 1 ]; then
+  echo "--- [2D] profile:=sim2d ---"
+  cleanup_procs
   ros2 launch pnc_nav_bringup bringup.launch.py profile:=sim2d use_gui:=false use_rviz:=false \
     > /tmp/pnc_sim_bringup.log 2>&1 &
-  LAUNCH_PID=$!
-  trap 'kill -INT ${LAUNCH_PID} 2>/dev/null' EXIT
+  if wait_ready; then
+    for case in feedback cancel unreachable; do
+      echo "  -> 用例 ${case}"
+      if timeout 90 python3 test/action_smoke_test.py "${case}" | tail -2; then
+        echo "     OK"
+      else
+        echo "     FAIL"
+        FAIL=1
+      fi
+    done
+  else
+    echo "  启动超时，见 /tmp/pnc_sim_bringup.log"; FAIL=1
+  fi
+  cleanup_procs
+fi
 
-  # 等 action server 起来（最多 60s）
-  for _ in $(seq 1 60); do
-    if ros2 action list 2>/dev/null | grep -q navigate_to_3d_pose; then break; fi
-    sleep 1
-  done
-
-  # 再等 TF 与地图就绪（冒烟第一步依赖 map->base_link，否则会立刻 TF_FAILURE）
-  for _ in $(seq 1 60); do
-    if timeout 2 ros2 run tf2_ros tf2_echo map base_link 2>/dev/null | grep -q Translation; then
-      break
-    fi
-    sleep 1
-  done
-  sleep 2
-
-  for case in feedback cancel unreachable; do
-    echo "  -> 用例 ${case}"
-    if timeout 90 python3 test/action_smoke_test.py "${case}" | tail -3; then
+if [ ${RUN_GO2W} -eq 1 ]; then
+  echo "--- [轮足] profile:=sim_go2w ---"
+  cleanup_procs
+  ros2 launch pnc_nav_bringup bringup.launch.py profile:=sim_go2w use_gui:=false use_rviz:=false \
+    > /tmp/pnc_go2w_bringup.log 2>&1 &
+  if wait_ready base; then
+    if timeout 120 python3 test/action_smoke_test.py feedback 0.6 0.0 | tail -2; then
       echo "     OK"
     else
       echo "     FAIL"
       FAIL=1
     fi
-  done
+  else
+    echo "  启动超时，见 /tmp/pnc_go2w_bringup.log"; FAIL=1
+  fi
+  cleanup_procs
+fi
+
+if [ ${RUN_TERRAIN} -eq 1 ]; then
+  echo "--- [坡道] slope_test + 地形 + 分段任务 ---"
+  cleanup_procs
+  ros2 launch pnc_nav_bringup gz_sim_3d_lidar_bringup.launch.py \
+    use_gui:=false use_rviz:=false use_elevation:=true world:=slope_test.sdf \
+    params_file:="$ROOT/install/pnc_nav_bringup/share/pnc_nav_bringup/config/nav_params_terrain.yaml" \
+    > /tmp/pnc_terrain_bringup.log 2>&1 &
+  if wait_ready; then
+    ros2 launch pnc_nav_task mission.launch.py \
+      params_file:="$ROOT/install/pnc_nav_task/share/pnc_nav_task/config/mission_slope.yaml" \
+      auto_start:=true > /tmp/pnc_terrain_mission.log 2>&1 &
+    if timeout 300 python3 test/mission_smoke_test.py 280 | tail -4; then
+      echo "     OK"
+    else
+      echo "     FAIL"
+      FAIL=1
+    fi
+  else
+    echo "  启动超时，见 /tmp/pnc_terrain_bringup.log"; FAIL=1
+  fi
+  cleanup_procs
 fi
 
 echo ""
 if [ ${FAIL} -eq 0 ]; then
   echo "=== 全部通过 ==="
 else
-  echo "=== 有失败项，见上面输出 / /tmp/pnc_test.log ==="
+  echo "=== 有失败项，见上面输出 / /tmp/pnc_*.log ==="
 fi
 exit ${FAIL}
