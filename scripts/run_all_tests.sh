@@ -71,17 +71,20 @@ PY
 }
 
 wait_ready() {
-  # 等 action server + TF（最多 90s）；$1 = 机器人基座 frame（默认 base_link）
+  # 就绪判据：action server 出现 + /odom、/map 话题存在（不再依赖 tf2_echo 的启动耗时）
   local base_frame="${1:-base_link}"
   for _ in $(seq 1 90); do
-    if ros2 action list 2>/dev/null | grep -q navigate_to_3d_pose; then
-      if timeout 2 ros2 run tf2_ros tf2_echo map "${base_frame}" 2>/dev/null | grep -q Translation; then
-        sleep 1
-        return 0
+    if timeout 6 ros2 action list 2>/dev/null | grep -q navigate_to_3d_pose; then
+      if timeout 6 ros2 topic list 2>/dev/null | grep -qx /odom; then
+        if timeout 6 ros2 topic list 2>/dev/null | grep -qx /map; then
+          sleep 4      # 给 TF/建图稳定一点时间
+          return 0
+        fi
       fi
     fi
     sleep 1
   done
+  echo "  (等待超时：base_frame=${base_frame})"
   return 1
 }
 
@@ -92,6 +95,9 @@ if ! colcon build --symlink-install --packages-select ${PACKAGES} --parallel-wor
   exit 1
 fi
 source install/setup.bash
+# 干净重启 ros2 daemon：长期运行的 daemon 会缓存旧图，导致 action list 卡住/过期
+ros2 daemon stop > /dev/null 2>&1 || true
+ros2 daemon start > /dev/null 2>&1 || true
 echo "构建 OK"
 
 echo ""
