@@ -32,7 +32,12 @@ python3 scripts/plot_results.py experiments/results/<目录>
 
 | 配置文件 | 内容 |
 |---|---|
-| `planner_comparison.yaml` | AStar2D+PurePursuit vs AStar2D+DWA（同一地图/目标，各 3 次） |
+| `planner_comparison.yaml` | AStar2D+PurePursuit vs AStar2D+DWA（各 3 次） |
+| `planner_extended.yaml` | 加 RRT*、直线规划示例插件（各 2 次） |
+| `costmap_ablation.yaml` | 静态图 vs 静态+障碍层（前方 spawn 0.4m 箱子，各 3 次） |
+| `cross_platform.yaml` | 2D 差速车 vs 轮足 Go2-W（同一目标，各 2 次） |
+
+> case 级字段：`profile`（覆盖全局）、`params_file`、`setup_cmd` + `setup_model_name`（spawn 障碍并校验）。
 
 ## 配置字段
 

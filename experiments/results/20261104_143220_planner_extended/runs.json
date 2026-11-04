@@ -1,0 +1,136 @@
+{
+  "config": {
+    "name": "planner_extended",
+    "profile": "sim2d",
+    "goal": [
+      2.0,
+      0.0
+    ],
+    "runs": 2,
+    "timeout": 120,
+    "cases": [
+      {
+        "name": "astar2d_purepursuit",
+        "params_file": ""
+      },
+      {
+        "name": "astar2d_dwa",
+        "params_file": "experiments/params/astar2d_dwa.yaml"
+      },
+      {
+        "name": "rrtstar_purepursuit",
+        "params_file": "experiments/params/rrt_star.yaml"
+      },
+      {
+        "name": "straightline_purepursuit",
+        "params_file": "experiments/params/straight_line.yaml"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "case": "astar2d_purepursuit",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 13.520196889,
+      "distance_traveled": 1.9116074173085638,
+      "final_pose": [
+        1.9065724520053928,
+        0.0077427362061804565
+      ]
+    },
+    {
+      "case": "astar2d_purepursuit",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 13.507605884,
+      "distance_traveled": 1.9112427263875842,
+      "final_pose": [
+        1.9062086460412118,
+        0.0077280306729671615
+      ]
+    },
+    {
+      "case": "astar2d_dwa",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 9.466829767,
+      "distance_traveled": 1.8611964707929138,
+      "final_pose": [
+        1.8610641004877957,
+        0.025413140021860455
+      ]
+    },
+    {
+      "case": "astar2d_dwa",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 9.49647267,
+      "distance_traveled": 1.862258408946594,
+      "final_pose": [
+        1.8583295082925777,
+        0.023905055349346463
+      ]
+    },
+    {
+      "case": "rrtstar_purepursuit",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 22.348855883,
+      "distance_traveled": 1.7878955874940734,
+      "final_pose": [
+        1.734950565007157,
+        0.06953340212594641
+      ]
+    },
+    {
+      "case": "rrtstar_purepursuit",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 32.443670256,
+      "distance_traveled": 2.0048329356475034,
+      "final_pose": [
+        1.793996445537027,
+        -0.25932215497280436
+      ]
+    },
+    {
+      "case": "straightline_purepursuit",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 8.531935211,
+      "distance_traveled": 1.852235966349087,
+      "final_pose": [
+        1.8533612719773913,
+        -6.4986268626368696e-15
+      ]
+    },
+    {
+      "case": "straightline_purepursuit",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 8.464372279,
+      "distance_traveled": 1.8505174206131012,
+      "final_pose": [
+        1.8505174206131012,
+        -6.564747831331397e-15
+      ]
+    }
+  ]
+}

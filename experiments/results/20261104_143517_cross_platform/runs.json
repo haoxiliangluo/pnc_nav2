@@ -1,0 +1,76 @@
+{
+  "config": {
+    "name": "cross_platform",
+    "profile": "sim2d",
+    "goal": [
+      1.0,
+      0.0
+    ],
+    "runs": 2,
+    "timeout": 180,
+    "cases": [
+      {
+        "name": "diff_drive_2d",
+        "params_file": ""
+      },
+      {
+        "name": "wheeled_quadruped_go2w",
+        "profile": "sim_go2w"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "case": "diff_drive_2d",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 10.175145954,
+      "distance_traveled": 0.9092140809764452,
+      "final_pose": [
+        0.9064512046320535,
+        0.011776892850066323
+      ]
+    },
+    {
+      "case": "diff_drive_2d",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 10.162776779,
+      "distance_traveled": 0.9087259672926347,
+      "final_pose": [
+        0.905956934351414,
+        0.01164376418447614
+      ]
+    },
+    {
+      "case": "wheeled_quadruped_go2w",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 3.82000592,
+      "distance_traveled": 1.0048412966254086,
+      "final_pose": [
+        0.7570980045326684,
+        0.033193219176213505
+      ]
+    },
+    {
+      "case": "wheeled_quadruped_go2w",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 3.260715149,
+      "distance_traveled": 0.9894368519326648,
+      "final_pose": [
+        0.7542661838384008,
+        0.03128195613637776
+      ]
+    }
+  ]
+}

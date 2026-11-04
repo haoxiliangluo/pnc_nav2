@@ -1,0 +1,104 @@
+{
+  "config": {
+    "name": "costmap_ablation",
+    "profile": "sim2d",
+    "goal": [
+      2.0,
+      0.0
+    ],
+    "runs": 3,
+    "timeout": 120,
+    "cases": [
+      {
+        "name": "static_only",
+        "params_file": "experiments/params/static_only.yaml",
+        "setup_cmd": "ros2 run ros_gz_sim create -world world_demo -file $HOME/pnc_nav2/experiments/assets/box.sdf -name exp_box -x 1.0 -y 0.0 -z 0.4"
+      },
+      {
+        "name": "with_obstacle_layer",
+        "params_file": "",
+        "setup_cmd": "ros2 run ros_gz_sim create -world world_demo -file $HOME/pnc_nav2/experiments/assets/box.sdf -name exp_box -x 1.0 -y 0.0 -z 0.4"
+      }
+    ]
+  },
+  "rows": [
+    {
+      "case": "static_only",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 13.495868394,
+      "distance_traveled": 1.9110713707847915,
+      "final_pose": [
+        1.9061077476896842,
+        0.007928579546112525
+      ]
+    },
+    {
+      "case": "static_only",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 13.534041471,
+      "distance_traveled": 1.9119995635811167,
+      "final_pose": [
+        1.9069825048208406,
+        0.008066136989155833
+      ]
+    },
+    {
+      "case": "static_only",
+      "run": 3,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 13.548224774,
+      "distance_traveled": 1.9121609816369642,
+      "final_pose": [
+        1.907138351291567,
+        0.008143945580579822
+      ]
+    },
+    {
+      "case": "with_obstacle_layer",
+      "run": 1,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 28.077149374,
+      "distance_traveled": 2.2011699128882736,
+      "final_pose": [
+        1.9569045854872824,
+        0.1659614691078164
+      ]
+    },
+    {
+      "case": "with_obstacle_layer",
+      "run": 2,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 28.074127936,
+      "distance_traveled": 2.2003867957333463,
+      "final_pose": [
+        1.9563125393439578,
+        0.166545760704738
+      ]
+    },
+    {
+      "case": "with_obstacle_layer",
+      "run": 3,
+      "success": true,
+      "error_code": 0,
+      "message": "goal reached",
+      "total_time": 28.112459478,
+      "distance_traveled": 2.199537907284249,
+      "final_pose": [
+        1.9561282984658588,
+        0.16681592025089848
+      ]
+    }
+  ]
+}

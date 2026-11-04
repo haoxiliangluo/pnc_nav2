@@ -47,7 +47,41 @@ PYTHONNOUSERSITE=1 python3 scripts/plot_results.py experiments/results/<目录> 
 
 - 配置在 `experiments/*.yaml`（profile / goal / runs / cases），结果落
   `experiments/results/<时间戳>_<实验名>/`（runs.json + summary.csv + plot_*.png）
-- 首组基线（2D 平地、目标 (2,0)、各 3 次，全部成功）：
+- 已有实验：`planner_comparison` / `planner_extended`（4 种规划器）/ `costmap_ablation`（静态图 vs 障碍层）/
+  `cross_platform`（2D 差速 vs 轮足 Go2-W）
+
+### 实验 1：规划器/跟踪器对比（目标 (2,0)，平地空走廊）
+
+| 用例 | 耗时 (s) | 里程 (m) |
+|---|---|---|
+| A* + PurePursuit2D | 13.52 / 13.51 | 1.91 |
+| A* + DWA2D | 9.47 / 9.50 | 1.86 |
+| **RRT\*** + PurePursuit2D | 22.35 / 32.44 | 1.79 / 2.00 |
+| 直线规划（示例插件）+ PurePursuit2D | **8.53 / 8.46** | 1.85 |
+
+> RRT* 随机性强（两次 22.3s / 32.4s），空走廊下直线规划最快；DWA 比 PP 更稳。
+
+### 实验 2：代价地图消融（目标 (2,0)，路径上 (1.0,0) 放 0.4m 箱子）
+
+| 用例 | 耗时 (s) | 里程 (m) |
+|---|---|---|
+| `static_only`（不接激光） | 13.5 / 13.5 / 17.2 | 1.91 |
+| `with_obstacle_layer`（激光 + 滚动窗口） | 28.1 / 28.4 / 29.4 | **2.20–2.24** |
+
+> 障碍层让 A* 看到窗口内的箱子并绕行（里程 1.91 → 2.2m）。
+> ⚠️ 注意：gz 运行期 spawn 的 `static` 模型**对激光可见，但物理碰撞不生效**（与 KI-016 同类问题），
+> 所以消融指标用"是否绕行 / 里程"，不要用"是否碰撞"。实验脚本已加 `setup verified` 校验模型确实存在。
+
+### 实验 3：跨平台对比（目标 (1,0)）
+
+| 平台 | 耗时 (s) | 里程 (m) |
+|---|---|---|
+| 2D 差速车（`sim2d`） | 10.18 / 10.16 | 0.91 |
+| 轮足 Go2-W（`sim_go2w`） | **3.82 / 3.26** | 1.00 / 0.99 |
+
+> 同一套导航框架、同一个目标，换平台只换"运动层插件 + profile"；轮足速度闭环后反而更快。
+
+### 早期基线（planner_comparison，各 3 次）
 
 | 用例 | 耗时 (s) | 里程 (m) |
 |---|---|---|

@@ -56,6 +56,16 @@ def shell_ok(cmd, timeout=6):
         return False
 
 
+def spawn_ok(name, retries=3):
+    """spawn 后确认模型真的在 gz 世界里（否则消融实验会结论失真）"""
+    for _ in range(retries):
+        time.sleep(1.0)
+        if shell_ok(f"gz model --list 2>/dev/null | grep -q '{name}'", timeout=8):
+            return True
+        time.sleep(1.0)
+    return False
+
+
 def wait_ready(timeout=90):
     t0 = time.time()
     while time.time() - t0 < timeout:
@@ -126,12 +136,13 @@ def main():
 
     rows = []
     for case in cfg['cases']:
+        case_profile = case.get('profile') or cfg['profile']
         params = case.get('params_file') or ''
         params_arg = f'params_file:={os.path.join(ROOT, params)}' if params else ''
         for run in range(1, int(cfg['runs']) + 1):
             print(f"\n=== {case['name']} run {run}/{cfg['runs']} ===", flush=True)
             kill_pnc_procs()
-            cmd = (f"ros2 launch pnc_nav_bringup bringup.launch.py profile:={cfg['profile']} "
+            cmd = (f"ros2 launch pnc_nav_bringup bringup.launch.py profile:={case_profile} "
                    f"use_gui:=false use_rviz:=false {params_arg} "
                    f"> /tmp/pnc_exp_{case['name']}_{run}.log 2>&1 &")
             subprocess.Popen(cmd, shell=True)
@@ -139,6 +150,22 @@ def main():
                 result = {'success': False, 'error_code': -3, 'message': 'bringup timeout',
                           'total_time': 0.0, 'distance_traveled': 0.0, 'final_pose': None}
             else:
+                setup_cmd = case.get('setup_cmd') or ''
+                setup_ok = True
+                if setup_cmd:
+                    print(f"  setup: {setup_cmd}", flush=True)
+                    subprocess.run(setup_cmd, shell=True, capture_output=True)
+                    setup_name = case.get('setup_model_name') or 'exp_box'
+                    setup_ok = spawn_ok(setup_name)
+                    print(f"  setup verified: {setup_ok}", flush=True)
+                    time.sleep(float(case.get('setup_wait', 1.5)))
+                if not setup_ok:
+                    result = {'success': False, 'error_code': -4, 'message': 'setup failed',
+                              'total_time': 0.0, 'distance_traveled': 0.0, 'final_pose': None}
+                    print("  -> setup failed, 跳过本次", flush=True)
+                    rows.append({'case': case['name'], 'run': run, **result})
+                    kill_pnc_procs()
+                    continue
                 result = probe.send_goal(cfg['goal'][0], cfg['goal'][1],
                                          float(cfg['timeout']))
             print(f"  -> success={result['success']} code={result['error_code']} "

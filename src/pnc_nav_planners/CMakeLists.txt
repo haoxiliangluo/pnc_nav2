@@ -88,6 +88,26 @@ target_include_directories(pure_pursuit_3d_tracker PUBLIC
 )
 ament_target_dependencies(pure_pursuit_3d_tracker ${dependencies})
 
+# RRT* 3D（源码已有，之前未注册）
+add_library(rrt_star_3d_planner SHARED
+  src/global_planners/rrt_star_3d/rrt_star_3d.cpp
+)
+target_include_directories(rrt_star_3d_planner PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(rrt_star_3d_planner ${dependencies})
+
+# Stanley 3D 跟踪器（源码已有，之前未注册）
+add_library(stanley_3d_tracker SHARED
+  src/path_trackers/stanley_3d/stanley_3d.cpp
+)
+target_include_directories(stanley_3d_tracker PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+ament_target_dependencies(stanley_3d_tracker ${dependencies})
+
 # ============================================================
 # Install
 # ============================================================
@@ -102,6 +122,8 @@ install(TARGETS
   dwa_2d_planner
   pure_pursuit_2d_tracker
   pure_pursuit_3d_tracker
+  rrt_star_3d_planner
+  stanley_3d_tracker
   EXPORT export_${PROJECT_NAME}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -118,6 +140,8 @@ ament_export_libraries(
   dwa_2d_planner
   pure_pursuit_2d_tracker
   pure_pursuit_3d_tracker
+  rrt_star_3d_planner
+  stanley_3d_tracker
 )
 ament_export_targets(export_${PROJECT_NAME})
 ament_export_dependencies(${dependencies})

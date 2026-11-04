@@ -1,0 +1,7 @@
+case,run,success,error_code,total_time,distance_traveled,message
+static_only,1,True,0,13.525670652,1.9119995634430322,goal reached
+static_only,2,True,0,13.519124359,1.9110648074380068,goal reached
+static_only,3,True,0,17.239481241,1.9110932721461367,goal reached
+with_obstacle_layer,1,True,0,28.144565989,2.2431452346026637,goal reached
+with_obstacle_layer,2,True,0,28.448725216,2.200135127017606,goal reached
+with_obstacle_layer,3,True,0,29.353887938,2.2026990909496527,goal reached

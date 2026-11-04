@@ -1,0 +1,15 @@
+# 规划器扩展对比（2D 平地，空走廊，目标 (2,0)）
+name: planner_extended
+profile: sim2d
+goal: [2.0, 0.0]
+runs: 2
+timeout: 120
+cases:
+  - name: astar2d_purepursuit
+    params_file: ""
+  - name: astar2d_dwa
+    params_file: experiments/params/astar2d_dwa.yaml
+  - name: rrtstar_purepursuit
+    params_file: experiments/params/rrt_star.yaml
+  - name: straightline_purepursuit
+    params_file: experiments/params/straight_line.yaml

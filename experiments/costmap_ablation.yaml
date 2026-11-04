@@ -1,0 +1,17 @@
+# 代价地图消融：静态图 vs 静态+障碍层（前方放一个 0.4m 箱子）
+name: costmap_ablation
+profile: sim2d
+goal: [2.0, 0.0]
+runs: 3
+timeout: 120
+cases:
+  - name: static_only          # 不吃激光：障碍不可见
+    params_file: experiments/params/static_only.yaml
+    setup_cmd: >-
+      ros2 run ros_gz_sim create -world world_demo -file $HOME/pnc_nav2/experiments/assets/box.sdf
+      -name exp_box -x 1.0 -y 0.0 -z 0.4
+  - name: with_obstacle_layer  # 默认：激光 + 滚动窗口障碍层
+    params_file: ""
+    setup_cmd: >-
+      ros2 run ros_gz_sim create -world world_demo -file $HOME/pnc_nav2/experiments/assets/box.sdf
+      -name exp_box -x 1.0 -y 0.0 -z 0.4

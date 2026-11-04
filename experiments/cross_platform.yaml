@@ -1,0 +1,11 @@
+# 跨平台对比：2D 差速车 vs 轮足 Go2-W（同一目标）
+name: cross_platform
+profile: sim2d
+goal: [1.0, 0.0]
+runs: 2
+timeout: 180
+cases:
+  - name: diff_drive_2d
+    params_file: ""
+  - name: wheeled_quadruped_go2w
+    profile: sim_go2w
