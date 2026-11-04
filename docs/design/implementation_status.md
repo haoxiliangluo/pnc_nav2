@@ -17,7 +17,7 @@
 | `pnc_nav_bringup` | launch + 参数 + 地图 + RViz | ✅ | `gz_sim_2d_bringup`、`amcl_localization`、`cartographer_slam`；`sim_3d_bringup` **不可用**（依赖外部 `go2_config`/`lio_sam`） |
 | `pnc_nav_utils` | 可视化 / 评估 / bag 工具 | 🟡 部分 | 有 `evaluation/`（nav_evaluator、planner_tester、goal_recorder、costmap_editor、nav_quality_monitor）；无 `visualization/`、`bag_tools/` |
 | `pnc_nav_map` | OctoMap / map_converter / traversability | ❌ 不存在 | 地图只靠 `nav2_map_server` 发 `/map` + 自建 adapter |
-| `pnc_nav_localization` | Fast-LIO2 / pose_estimator | ❌ 不存在 | 用外部 AMCL/Cartographer launch，靠 TF 对接 |
+| `pnc_nav_localization` | Fast-LIO2 / pose_estimator | 🟡 不自研，直接接外部 | 2D：AMCL/Cartographer；3D：**LIO-SAM 已接入并验证**（`localization:=lio_sam`，见 guides/lio_sam_setup.md） |
 | `pnc_nav_control` | locomotion 接口 / RL / MPC 步态 | ❌ 不存在 | 只有 `controller_base.hpp`（`LocomotionControllerBase`），无实现、未接入 NavServer |
 | （未在架构图中）`pnc_nav_rviz` | — | ✅ 存在 | 自绘 RViz 面板（移动控制 + 初始位姿 + Cartographer write_state） |
 | （未在架构图中）`pnc_nav_examples` | — | ✅ 新增 | 教学示例插件 `StraightLinePlanner`（commit `ed5280c`） |
@@ -65,7 +65,7 @@
 | 阶段（`ARCHITECTURE.md` / `NAV2_LEARNING_...md`） | 计划内容 | 实际 |
 |---|---|---|
 | Phase 1：2D 仿真验证 | 工作空间、插件框架、Gazebo、A*、DWA、PP、评估 | ✅ 完成（`docs/phase1_验证清单.md`），但**架构图里的勾选框从未更新（全 `[ ]`）** |
-| Phase 2：3D 定位与建图 | Fast-LIO2/LIO-SAM、OctoMap、高程图、ESDF、可通行性 | 🟡 只做了 2D 的 AMCL + Cartographer；3D 部分未开始 |
+| Phase 2：3D 定位与建图 | Fast-LIO2/LIO-SAM、OctoMap、高程图、ESDF、可通行性 | 🟡 3D 定位已接 LIO-SAM（仿真误差 0.01m）；建图仍是 2D 静态图 + 高程图 |
 | Phase 3：3D 规划与控制 | 3D 全局/局部、可通行性代价 | ❌ 代码里有 3D 插件但没在 3D 地图上验证（`use_3d: false`，`getGroundHeight/getTraversability` 零调用） |
 | Phase 4：机器狗仿真 | Go2 + 步态 | ❌ 只有 `LocomotionControllerBase` 基类；`sim_3d_bringup` 不可用 |
 | Phase 5：进阶与真机 | 任务层、性能、部署 | ❌ 未开始（`ARCHITECTURE` 的 Mission Layer 只有图） |

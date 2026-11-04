@@ -25,6 +25,7 @@ def generate_launch_description():
     y_pose = LaunchConfiguration('y_pose')
     z_pose = LaunchConfiguration('z_pose')
     world = LaunchConfiguration('world')
+    bridge_config = LaunchConfiguration('bridge_config')
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true'),
@@ -34,6 +35,8 @@ def generate_launch_description():
         DeclareLaunchArgument('y_pose', default_value='0.0'),
         DeclareLaunchArgument('z_pose', default_value='0.08'),
         DeclareLaunchArgument('world', default_value='playground.sdf'),
+        DeclareLaunchArgument('bridge_config', default_value='bridge_3d.yaml',
+                              description='bridge_3d.yaml（含 tf）或 bridge_3d_lio.yaml（配合 LIO-SAM，不桥 tf）'),
 
         # SC40 world + 3D-lidar robot + 3D bridge (points -> PointCloud2)
         IncludeLaunchDescription(
@@ -48,7 +51,7 @@ def generate_launch_description():
                 'z_pose': z_pose,
                 'world': world,
             'robot_urdf': 'diff_drive_3d.urdf.xacro',
-                'bridge_config': 'bridge_3d.yaml',
+                'bridge_config': bridge_config,
             }.items(),
         ),
 

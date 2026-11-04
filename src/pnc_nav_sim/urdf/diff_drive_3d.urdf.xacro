@@ -290,4 +290,47 @@
       </lidar>
     </sensor>
   </gazebo>
+  <!-- 坡道场景：提高轮子摩擦，减少上坡打滑（默认 mu=1.0 时实测只有 ~0.05 m/s） -->
+  <gazebo reference="left_wheel">
+    <mu1>2.0</mu1>
+    <mu2>2.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>100.0</kd>
+  </gazebo>
+  <gazebo reference="right_wheel">
+    <mu1>2.0</mu1>
+    <mu2>2.0</mu2>
+    <kp>1000000.0</kp>
+    <kd>100.0</kd>
+  </gazebo>
+  <gazebo reference="front_support_wheel">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+  <gazebo reference="back_support_wheel">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+  <!-- IMU（LIO-SAM 3D 定位需要，200Hz） -->
+  <gazebo reference="base_link">
+    <sensor type="imu" name="imu_sensor">
+      <always_on>true</always_on>
+      <update_rate>200</update_rate>
+      <visualize>false</visualize>
+      <topic>/imu</topic>
+      <gz_frame_id>base_link</gz_frame_id>
+      <imu>
+        <angular_velocity>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.0002</stddev></noise></z>
+        </angular_velocity>
+        <linear_acceleration>
+          <x><noise type="gaussian"><mean>0.0</mean><stddev>0.0017</stddev></noise></x>
+          <y><noise type="gaussian"><mean>0.0</mean><stddev>0.0017</stddev></noise></y>
+          <z><noise type="gaussian"><mean>0.0</mean><stddev>0.0017</stddev></noise></z>
+        </linear_acceleration>
+      </imu>
+    </sensor>
+  </gazebo>
 </robot>

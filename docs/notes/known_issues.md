@@ -622,6 +622,27 @@ void AStar2D::cleanup() {
 以 `error_code=6` 失败（仍会清掉旧插件，需重发）。
 
 ---
+### KI-022 坡道速度上不去：调 DWA 限速和轮子摩擦都无效（牵引/物理限制）
+
+| 项 | 内容 |
+|---|---|
+| 现象 | 15° 坡道（`slope_test.sdf`）上速度约 0.05–0.06 m/s，2.5m 爬升要 40s |
+| 试过 | ① DWA `max_vel_x 0.2→0.35`、`max_vel_theta 0.8→1.2`、`acc_lim_x 1.0→1.5`；② 驱动轮 `<mu1/mu2> 1.0→2.0</mu1>`、支撑轮 0.2 |
+| 结果 | 三段任务总耗时 **71s → 73.4s / 76.3s**（无收益，甚至在噪声内变差） |
+| 结论 | gz 的 `DiffDrive` 是速度指令直驱，打滑来自接触模型与坡面法向/切向摩擦，不是控制限速；继续调参数收益极低 |
+| 后续 | 真想加速：换轮足/更大轮径、加 `<kp>` 接触刚度实验、或把坡道任务的分段目标改稀（少一次停走） |
+
+### KI-023 LIO-SAM 接入：环境坑多、回环关闭、地图与静态图不一致
+
+| 项 | 内容 |
+|---|---|
+| ✅ 已验证 | 仿真直行 0.75m：`map→base_link` 与 gz 真值误差 **0.01 m**；导航到点 (1.5,0) 成功 4.69s / 0.65m |
+| 环境坑 | `libgtsam-dev` 缺 `CppUnitLite.a`；apt 无 `gtsam_unstable`；GTSAM 自带 Eigen 与系统 3.4.0 冲突；缺 `libmetis-dev`；apt 的 GTSAM cmake config 抢匹配 → 见 `scripts/setup_lio_sam.sh`、`docs/guides/lio_sam_setup.md` |
+| 改造 | 上游发 `odom→lidar_link` + `odom→base_link`，与本框架/URDF 冲突 → 改为 **只发 `map→base_link`**（`lidarToBase` 外参），并关闭 IMU 预积分 TF |
+| 限制 1 | 回环关闭（`loopClosureEnableFlag=false`），长距离会累积漂移 |
+| 限制 2 | LIO-SAM 的世界原点是启动位置，与 `maps/111` 静态图不重合 → 做长任务前要么用对应场景图，要么后续接建图/保存 |
+| 限制 3 | `third_party/LIO-SAM` 增加了 `lio_sam` 包，编译依赖 `/opt/gtsam_sys`（`CMAKE_PREFIX_PATH`），未装时 **不要** 全量 `colcon build`（会在 lio_sam 处失败） |
+
 
 ## 变更记录
 
@@ -648,3 +669,6 @@ void AStar2D::cleanup() {
 | 2026-10-23 | DWA 硬/软代价分离（LETHAL 才算碰撞）；坡道仍卡 → 需要独立地形代价项 |
 | 2026-10-23 | 地形层改为只作用于全局规划：DWA 能沿路径上坡到平台（坡上很慢） |
 | 2026-10-23 | 高程填充加置信度门槛（邻域高差 >0.35m 不填）；坡道分段任务 3/3 成功 71s |
+
+| 2026-11-04 | 轮足/坡道调参：DWA max_vel_x 0.2→0.35、驱动轮 mu 1.0→2.0，坡道任务 71s→73s（无收益）→ 新增 KI-022 |
+| 2026-11-04 | 3D 定位：LIO-SAM 编译打通并在仿真里跑通（TF 误差 0.01m、导航到点 4.7s）→ 新增 KI-023、guides/lio_sam_setup.md |

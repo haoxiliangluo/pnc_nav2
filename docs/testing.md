@@ -91,6 +91,19 @@ PYTHONNOUSERSITE=1 python3 scripts/plot_results.py experiments/results/<目录> 
 > DWA 更稳定（耗时方差小）；PP 有一次更快（9.09s）但波动大。
 > 注意：出图要用 `PYTHONNOUSERSITE=1`（`~/.local` 的 numpy 2.x 与系统 matplotlib 不兼容）。
 
+## 2.6 3D 定位（LIO-SAM）验证
+
+启动：`gz_sim_3d_lidar_bringup.launch.py localization:=lio_sam`（细节见 [guides/lio_sam_setup.md](guides/lio_sam_setup.md)）
+
+| 检查项 | 方法 | 结果（2026-11-04） |
+|---|---|---|
+| TF 链路 | `ros2 run tf2_ros tf2_echo map base_link` | `map→base_link` 正常（z≈-0.29，雷达外参） |
+| 定位精度 | 直行 0.75m，比对 gz `/odom` 真值 | LIO-SAM 0.76m → **误差 0.01m** |
+| 导航闭环 | `test/action_smoke_test.py feedback 1.5 0.0` | `success=True error_code=0 4.69s / 0.65m` |
+| 无环境变量运行 | 不设 `LD_LIBRARY_PATH`（只 source ROS+install） | 通过（RPATH 已固化 `/opt/gtsam_sys/lib`） |
+
+> `/lio_sam/mapping/odometry` 是 **BEST_EFFORT** QoS，订阅端需匹配，否则收不到数据。
+
 ## 3. 怎么加用例
 
 - **算法/策略** → 加 gtest（参考 `pnc_nav_map/test/` 与 `pnc_nav_task/test/`）

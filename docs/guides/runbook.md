@@ -40,7 +40,7 @@
 | `./scripts/run_all_tests.sh [--sim]` | 一键回归：构建 + 30 个 gtest（+ 仿真冒烟） | ✅ 可用 |
 | `pnc_nav_bringup/amcl_localization.launch.py` | 地图 + AMCL 定位 | ✅ 可用（需先起仿真） |
 | `pnc_nav_bringup/cartographer_slam.launch.py` | Cartographer 建图 | ✅ 可用（需先起仿真） |
-| `pnc_nav_bringup/sim_3d_bringup.launch.py` | 名义上的 Go2 3D 启动 | ❌ **不可用**：include 外部包 `go2_config` / `lio_sam`，本仓库不含 |
+| `pnc_nav_bringup/sim_3d_bringup.launch.py` | 名义上的 Go2 3D 启动 | ❌ **不可用**：仍需外部 `go2_config`；3D 定位请用 `gz_sim_3d_lidar_bringup localization:=lio_sam` |
 | `./start_nav.sh` | 一键：2D 主入口 + 域隔离 | ✅ 可用 |
 
 ### 2.0 统一入口的 profile
@@ -52,6 +52,7 @@
 | `sim2d_cartographer` | Cartographer 建图（cartographer_node + /map，无 nav_server） | 建图 |
 | `sim3d` | 3D 激光车（点云障碍层，cloud=points） | 3D 感知/避障 |
 | `sim3d_elevation` | 3D + 高程图地形代价（Phase 3） | 地形相关 |
+| `gz_sim_3d_lidar_bringup` + `localization:=lio_sam` | 3D 激光 + IMU 跑 LIO-SAM（发 `map→base_link`） | 3D 定位实验 |
 | `real` | 只起 map_server + nav_server + health_monitor，TF/odom/scan 由外部提供 | 真机接入 |
 
 ```bash

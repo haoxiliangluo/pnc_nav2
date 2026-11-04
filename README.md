@@ -194,8 +194,9 @@ ros2 launch pnc_nav_bringup sim_3d_bringup.launch.py
   - [ ] 路径平滑
 
 - [ ] **Phase 3: 3D 定位与建图**
-  - [ ] AMCL 定位
-  - [ ] LIO-SAM 集成
+  - [x] AMCL 定位（2D，`amcl_localization.launch.py`）
+  - [x] LIO-SAM 集成（3D，`localization:=lio_sam`，仿真 TF 误差 0.01m，见 [guides/lio_sam_setup.md](docs/guides/lio_sam_setup.md)）
+  - [ ] 3D 建图（LIO-SAM 点位图 / OctoMap）
   - [ ] OctoMap 3D 地图
 
 - [ ] **Phase 4: Go2 机器狗导航**
