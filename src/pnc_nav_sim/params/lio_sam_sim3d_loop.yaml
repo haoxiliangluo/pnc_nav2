@@ -1,0 +1,89 @@
+/**:
+  ros__parameters:
+    # 话题（与 pnc_nav_sim/bridge_3d_lio.yaml 对齐）
+    pointCloudTopic: "points"
+    imuTopic: "imu"
+    odomTopic: "odometry/imu"
+    gpsTopic: "odometry/gpsz"
+
+    # 坐标系
+    lidarFrame: "velodyne"
+    baselinkFrame: "base_link"
+    odometryFrame: "odom"
+    mapFrame: "map"
+
+    # GPS（仿真不用）
+    useImuHeadingInitialization: false
+    useGpsElevation: false
+    gpsCovThreshold: 2.0
+    poseCovThreshold: 25.0
+
+    # 存档
+    savePCD: false
+    savePCDDirectory: "/tmp/LOAM/"
+
+    # 传感器：gz 的 16 线 gpu_lidar（水平 1800，垂直 ±15°）
+    sensor: velodyne
+    N_SCAN: 16
+    Horizon_SCAN: 720
+    downsampleRate: 1
+    lidarMinRange: 0.5
+    lidarMaxRange: 30.0
+
+    # IMU 噪声（gz 里设的 stddev 量级）
+    imuAccNoise: 3.9939570888238808e-03
+    imuGyrNoise: 1.5636343949698187e-03
+    imuAccBiasN: 6.4356659353532566e-05
+    imuGyrBiasN: 3.5640318696367613e-05
+    imuGravity: 9.80511
+    imuRPYWeight: 0.01
+
+    # 外参：雷达在 base 上方 0.3m（base -> lidar 是 +0.3z，lidar -> base 是 -0.3z）
+    extrinsicTrans: [0.0, 0.0, -0.3]
+    extrinsicRot: [1.0, 0.0, 0.0,
+                   0.0, 1.0, 0.0,
+                   0.0, 0.0, 1.0]
+    extrinsicRPY: [1.0, 0.0, 0.0,
+                   0.0, 1.0, 0.0,
+                   0.0, 0.0, 1.0]
+    # pnc_nav 改造：map -> base_link TF 的外参（与上面一致）
+    lidarToBase: [0.0, 0.0, -0.3]
+
+    # LOAM 特征阈值
+    edgeThreshold: 1.0
+    surfThreshold: 0.1
+    edgeFeatureMinValidNum: 10
+    surfFeatureMinValidNum: 100
+
+    # 体素滤波（室内小场景）
+    odometrySurfLeafSize: 0.2
+    mappingCornerLeafSize: 0.1
+    mappingSurfLeafSize: 0.2
+
+    # 机器人运动约束（差速车不上天）
+    z_tollerance: 0.5
+    rotation_tollerance: 1.5
+
+    # CPU
+    numberOfCores: 2
+    mappingProcessInterval: 0.15
+
+    # 关键帧
+    surroundingkeyframeAddingDistThreshold: 0.5
+    surroundingkeyframeAddingAngleThreshold: 0.2
+    surroundingKeyframeDensity: 0.5
+    surroundingKeyframeSearchRadius: 15.0
+
+    # 回环：本组实验开启（对比关回环的漂移）
+    loopClosureEnableFlag: true
+    loopClosureFrequency: 1.0
+    surroundingKeyframeSize: 25
+    historyKeyframeSearchRadius: 6.0
+    historyKeyframeSearchTimeDiff: 10.0
+    historyKeyframeSearchNum: 15
+    historyKeyframeFitnessScore: 0.3
+
+    # 可视化
+    globalMapVisualizationSearchRadius: 20.0
+    globalMapVisualizationPoseDensity: 5.0
+    globalMapVisualizationLeafSize: 0.5

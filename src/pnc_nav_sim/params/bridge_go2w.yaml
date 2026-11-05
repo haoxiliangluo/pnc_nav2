@@ -117,3 +117,16 @@
   ros_type_name: "std_msgs/msg/Float64"
   gz_type_name: "gz.msgs.Double"
   direction: ROS_TO_GZ
+
+# pnc_nav：3D 激光 + IMU（地形 / LIO-SAM）
+- ros_topic_name: "points"
+  gz_topic_name: "points/points"
+  ros_type_name: "sensor_msgs/msg/PointCloud2"
+  gz_type_name: "gz.msgs.PointCloudPacked"
+  direction: GZ_TO_ROS
+
+- ros_topic_name: "imu"
+  gz_topic_name: "imu"
+  ros_type_name: "sensor_msgs/msg/Imu"
+  gz_type_name: "gz.msgs.IMU"
+  direction: GZ_TO_ROS

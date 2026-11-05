@@ -53,6 +53,7 @@
 | `sim3d` | 3D 激光车（点云障碍层，cloud=points） | 3D 感知/避障 |
 | `sim3d_elevation` | 3D + 高程图地形代价（Phase 3） | 地形相关 |
 | `gz_sim_3d_lidar_bringup` + `localization:=lio_sam` | 3D 激光 + IMU 跑 LIO-SAM（发 `map→base_link`） | 3D 定位实验 |
+| `bringup.launch.py profile:=sim_go2w_terrain` | 轮足 + 16 线激光 + IMU + 高程图地形 | 轮足上坡（KI-024 未过） |
 | `real` | 只起 map_server + nav_server + health_monitor，TF/odom/scan 由外部提供 | 真机接入 |
 
 ```bash

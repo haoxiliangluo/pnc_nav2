@@ -104,6 +104,35 @@ PYTHONNOUSERSITE=1 python3 scripts/plot_results.py experiments/results/<目录> 
 
 > `/lio_sam/mapping/odometry` 是 **BEST_EFFORT** QoS，订阅端需匹配，否则收不到数据。
 
+## 2.7 LIO-SAM 长距离漂移（3 圈矩形闭环）
+
+```bash
+# 1) 起仿真（专用世界 lio_room.sdf：12x8m 房间 + 4 立柱 + 2 箱子）
+ros2 launch pnc_nav_bringup gz_sim_3d_lidar_bringup.launch.py \
+  use_gui:=false use_rviz:=false localization:=lio_sam world:=lio_room.sdf
+# 2) 桥出 gz 世界真值（注意：不能用 /odom 当真值！）
+ros2 run ros_gz_bridge parameter_bridge \
+  "/world/lio_room/dynamic_pose/info@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V"
+# 3) 跑矩形闭环
+python3 test/lio_drift_test.py --laps 3 --forward 4.0 --side 3.0 \
+  --gt-topic /world/lio_room/dynamic_pose/info
+```
+
+| 配置 | 圈末误差 (m) | ATE RMSE | 最大误差 | 最终航向误差 |
+|---|---|---|---|---|
+| 关回环 | 0.005 / 0.009 / 0.009 | **0.039 m** | 0.128 m | 0.02° |
+| 开回环 | 0.005 / 0.006 / 0.006 | **0.038 m** | 0.110 m | 0.03° |
+
+> 路径实测 30.7 m（真值），3 圈回到起点。漂移量级 4 cm → 在这个场景里回环基本无事可做（两者差异在噪声内）。
+
+### ⚠️ 两个测量陷阱（都踩过，别重复）
+
+1. **不能用 gz 的 `/odom` 当定位真值**：那是轮速里程计，原地转 90° 时会严重打滑，
+   3 圈下来"里程"报 41.65 m（实际 30.75 m）。用它当参照物会算出 LIO-SAM "漂移 5.6 m"，
+   实际 LIO-SAM 是准的（4 cm）。真值要用 `/world/<world>/dynamic_pose/info`（gz 世界位姿）。
+2. **ROS domain 别和别的仿真混**：和 MoveXBot 仿真同 domain 时会看到重复节点，
+   甚至两个 LIO-SAM 实例同时往同一话题发位姿。测试固定用 `ROS_DOMAIN_ID=77`。
+
 ## 3. 怎么加用例
 
 - **算法/策略** → 加 gtest（参考 `pnc_nav_map/test/` 与 `pnc_nav_task/test/`）

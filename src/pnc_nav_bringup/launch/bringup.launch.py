@@ -29,6 +29,8 @@ PROFILES = {
                          'elevation': 'false'},
     'sim_go2w':         {'kind': 'sim_go2w', 'scan': '',      'cloud': '',
                          'elevation': 'false'},
+    'sim_go2w_terrain': {'kind': 'sim_go2w', 'scan': '',      'cloud': 'points',
+                         'elevation': 'true'},
     'sim2d_amcl':       {'kind': 'sim2d_amcl', 'scan': 'nav_scan', 'cloud': '',   'elevation': 'false'},
     'sim2d_cartographer': {'kind': 'sim2d_cartographer', 'scan': 'nav_scan', 'cloud': '',
                            'elevation': 'false'},
@@ -95,7 +97,8 @@ def _launch_setup(context, *args, **kwargs):
                 # Go2 模型的 base 链接叫 "base"
                 {'robot_frame': 'base'},
                 {'local_costmap.scan_topic': ''},
-                {'local_costmap.cloud_topic': ''},
+                {'local_costmap.cloud_topic': profile['cloud']},
+                {'use_elevation_costmap': profile['elevation'] == 'true'},
                 # 轮足平台：速度/转向能力有限，跟踪器放慢；命中"轮足"才覆盖
                 {'path_tracker.max_linear_vel': 0.25 if is_wheeled else 0.30},
                 {'path_tracker.max_angular_vel': 0.8 if is_wheeled else 1.0},
@@ -112,6 +115,12 @@ def _launch_setup(context, *args, **kwargs):
                 {'progress_timeout': 12.0 if is_wheeled else 8.0},
             ],
         ))
+        if profile['elevation'] == 'true':
+            actions.append(IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(PathJoinSubstitution([
+                    FindPackageShare('pnc_nav_map'), 'launch', 'elevation_map.launch.py'])),
+                launch_arguments={'use_sim_time': use_sim_time}.items(),
+            ))
         actions.append(Node(
             package='pnc_nav_locomotion', executable='locomotion_node',
             name='locomotion', output='screen',
@@ -238,7 +247,7 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('profile', default_value='sim2d',
                               description='sim2d | sim2d_amcl | sim2d_cartographer | sim3d | '
-                                          'sim3d_elevation | sim_go2 | sim_go2w | real'),
+                                          'sim3d_elevation | sim_go2 | sim_go2w | sim_go2w_terrain | real'),
         DeclareLaunchArgument('localization', default_value='static',
                               description='static（固定 map->odom）| amcl（AMCL 提供 map->odom）'),
         DeclareLaunchArgument('initial_pose_x', default_value='0.0'),

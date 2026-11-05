@@ -265,7 +265,8 @@
       <lidar>
         <scan>
           <horizontal>
-            <samples>1800</samples>
+            <!-- 720（1.0°/列）：1800 列时 gz 软件渲染只能跑 ~5Hz，LIO-SAM 需要稳定 10Hz -->
+            <samples>720</samples>
             <resolution>1</resolution>
             <min_angle>-3.14159265</min_angle>
             <max_angle>3.14159265</max_angle>

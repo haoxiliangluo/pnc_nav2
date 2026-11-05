@@ -81,29 +81,39 @@ def generate_launch_description():
         condition=use_lio_loc,
     )
 
+    points_time_node = Node(
+        package='pnc_nav_sim', executable='points_time_adder.py',
+        name='points_time_adder', output='screen',
+        parameters=[{'use_sim_time': use_sim_time}],
+        condition=use_lio_loc,
+    )
+
+    # LIO-SAM 需要逐点 time（deskew），没有的话会 "system will drift significantly"
+    lio_overrides = {'use_sim_time': use_sim_time, 'pointCloudTopic': 'points_time'}
+
     lio_nodes = [
         Node(
             package='lio_sam', executable='lio_sam_imuPreintegration',
             name='lio_sam_imuPreintegration', output='screen',
-            parameters=[lio_params, {'use_sim_time': use_sim_time}],
+            parameters=[lio_params, lio_overrides],
             condition=use_lio_loc,
         ),
         Node(
             package='lio_sam', executable='lio_sam_imageProjection',
             name='lio_sam_imageProjection', output='screen',
-            parameters=[lio_params, {'use_sim_time': use_sim_time}],
+            parameters=[lio_params, lio_overrides],
             condition=use_lio_loc,
         ),
         Node(
             package='lio_sam', executable='lio_sam_featureExtraction',
             name='lio_sam_featureExtraction', output='screen',
-            parameters=[lio_params, {'use_sim_time': use_sim_time}],
+            parameters=[lio_params, lio_overrides],
             condition=use_lio_loc,
         ),
         Node(
             package='lio_sam', executable='lio_sam_mapOptimization',
             name='lio_sam_mapOptimization', output='screen',
-            parameters=[lio_params, {'use_sim_time': use_sim_time}],
+            parameters=[lio_params, lio_overrides],
             condition=use_lio_loc,
         ),
     ]
@@ -155,6 +165,7 @@ def generate_launch_description():
             condition=use_static_loc,
         ),
 
+        points_time_node,
         *lio_nodes,
 
         # 可选：高程图节点（/points → /traversability_map）

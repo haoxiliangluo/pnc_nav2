@@ -643,6 +643,17 @@ void AStar2D::cleanup() {
 | 限制 2 | LIO-SAM 的世界原点是启动位置，与 `maps/111` 静态图不重合 → 做长任务前要么用对应场景图，要么后续接建图/保存 |
 | 限制 3 | `third_party/LIO-SAM` 增加了 `lio_sam` 包，编译依赖 `/opt/gtsam_sys`（`CMAKE_PREFIX_PATH`），未装时 **不要** 全量 `colcon build`（会在 lio_sam 处失败） |
 
+### KI-024 轮足 + 地形：坡上目标点被判 "Goal is occupied"
+
+| 项 | 内容 |
+|---|---|
+| 背景 | 给 Go2-W 加了 16 线激光 + IMU（`go2w.urdf`）和 `sim_go2w_terrain` profile（点云障碍层 + 高程图 + DWA） |
+| 现象 | 坡道任务 3 段：第 1 段 (1.5,0) 用了 **77.7 s**（平地，慢得异常）；第 2 段 (3.5,0) 连续两次 3.3 s 失败，日志 `Goal is occupied` |
+| 已知 | 3D 差速车同样的坡道任务能过（71 s 三段），所以不是地形层本身不可用 |
+| 怀疑 | ① 地形代价对目标格判 LETHAL 的门槛在轮足 footprint / 高度上不适用（`elevation_lethal_score`）；② 轮足 base 高 0.34m + 雷达 0.30m，高程滤波的 `z` 门限会切到坡面；③ 目标点正好落在坡度最大处 |
+| 下一步 | 给地形层加"目标/起点附近 footprint 清除"（差速车 KI-017 的同类修复），并核对 `elevation_lethal_score`；再测一次耗时 |
+| 顺便 | 第 1 段 77.7s 也要查：是 DWA 限速 + 地形惩罚叠加，还是轮足爬坡打滑 |
+
 
 ## 变更记录
 
@@ -672,3 +683,4 @@ void AStar2D::cleanup() {
 
 | 2026-11-04 | 轮足/坡道调参：DWA max_vel_x 0.2→0.35、驱动轮 mu 1.0→2.0，坡道任务 71s→73s（无收益）→ 新增 KI-022 |
 | 2026-11-04 | 3D 定位：LIO-SAM 编译打通并在仿真里跑通（TF 误差 0.01m、导航到点 4.7s）→ 新增 KI-023、guides/lio_sam_setup.md |
+| 2026-11-04 | LIO-SAM 长距离漂移实测：3 圈 30.7m，ATE 0.039m（关回环）/0.038m（开回环）；发现 /odom 不能当真值；新增 KI-024 |
