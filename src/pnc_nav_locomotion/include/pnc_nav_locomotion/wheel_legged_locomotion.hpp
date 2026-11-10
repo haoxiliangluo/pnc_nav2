@@ -62,6 +62,12 @@ private:
   double yaw_hold_gain_{1.2};
   double yaw_hold_limit_{0.20};  // 最大补偿角速度 (rad/s)
   double yaw_hold_{0.0};         // 当前补偿量
+  // 姿态补偿：用腿关节让机身保持水平（坡面上前后轮负载/牵引不对称的治本手段）
+  bool use_attitude_comp_{true};
+  double attitude_gain_{0.8};
+  double max_leg_offset_{0.06};   // 单腿伸缩上限 (m)
+  double hip_x_{0.1934};          // 髋关节前后偏移（Go2-W）
+  double hip_y_{0.0465};          // 髋关节左右偏移
 
   double stand_thigh_{0.0};
   double stand_calf_{0.0};

@@ -5,6 +5,7 @@
 //   /cmd_vel ──▶ LocomotionController 插件 ──▶ /joint_commands
 // 服务：/locomotion/estop、/locomotion/reset（std_srvs/Trigger）
 
+#include <algorithm>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -103,6 +104,18 @@ private:
       return;
     }
     pnc_nav_core::RobotState state;
+    // 姿态（姿态补偿用）：odom 四元数 -> roll/pitch/yaw
+    {
+      const auto & q = odom_.pose.pose.orientation;
+      const double sinr_cosp = 2.0 * (q.w * q.x + q.y * q.z);
+      const double cosr_cosp = 1.0 - 2.0 * (q.x * q.x + q.y * q.y);
+      const double sinp = 2.0 * (q.w * q.y - q.z * q.x);
+      const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
+      const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+      state.roll = std::atan2(sinr_cosp, cosr_cosp);
+      state.pitch = std::asin(std::clamp(sinp, -1.0, 1.0));
+      state.yaw = std::atan2(siny_cosp, cosy_cosp);
+    }
     state.linear_vel_x = odom_.twist.twist.linear.x;
     state.linear_vel_y = odom_.twist.twist.linear.y;
     state.angular_vel_z = odom_.twist.twist.angular.z;

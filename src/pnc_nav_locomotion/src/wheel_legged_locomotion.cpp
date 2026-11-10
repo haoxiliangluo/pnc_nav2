@@ -51,6 +51,11 @@ void WheelLeggedLocomotion::configure(
   yaw_hold_gain_ = node_->declare_parameter<double>(name_ + ".yaw_hold_gain", yaw_hold_gain_);
   yaw_hold_limit_ = node_->declare_parameter<double>(
     name_ + ".yaw_hold_limit", yaw_hold_limit_);
+  use_attitude_comp_ = node_->declare_parameter<bool>(
+    name_ + ".use_attitude_compensation", use_attitude_comp_);
+  attitude_gain_ = node_->declare_parameter<double>(name_ + ".attitude_gain", attitude_gain_);
+  max_leg_offset_ = node_->declare_parameter<double>(
+    name_ + ".max_leg_offset", max_leg_offset_);
 
   frequency_ = std::max(10.0, frequency_);
   body_height_ = std::clamp(body_height_, 0.15, thigh_length_ + calf_length_ - 0.01);
@@ -97,9 +102,27 @@ pnc_nav_core::JointCommands WheelLeggedLocomotion::computeJointCommands(
   out.kd.assign(kTotalJoints, 2.0);
 
   // 腿：站立位（位置控制）
+  // 姿态补偿：机身俯仰/横滚时，按腿部位置调整伸缩量，让机身保持水平。
+  // 原理：坡面上前后轮载荷/牵引不对称会让轮足跑偏（KI-024），腿长补偿能减小 roll/pitch，
+  //       从而让四轮接地更均匀。
+  // 每条腿在 base 系下的水平位置（前+/左+）：
+  const double leg_dx[4] = {hip_x_, hip_x_, -hip_x_, -hip_x_};    // FL FR RL RR
+  const double leg_dy[4] = {hip_y_, -hip_y_, hip_y_, -hip_y_};
   for (int leg = 0; leg < 4; ++leg) {
-    out.positions[leg * 3 + 1] = stand_thigh_;
-    out.positions[leg * 3 + 2] = stand_calf_;
+    double dz = 0.0;
+    if (use_attitude_comp_) {
+      // pitch>0 = 机头上仰；roll>0 = 左侧抬起
+      // 符号推导：pitch<0（机头下沉）时前腿要"伸"（dz<0），
+      // 所以 dz 与 x*sin(pitch) 同号；roll 同理（第一次实现符号写反，导致正反馈）
+      dz = attitude_gain_ * (leg_dx[leg] * std::sin(current_state.pitch) +
+                              leg_dy[leg] * std::sin(current_state.roll));
+      dz = std::clamp(dz, -max_leg_offset_, max_leg_offset_);
+    }
+    double thigh = stand_thigh_;
+    double calf = stand_calf_;
+    solveLegIk(0.0, -(body_height_ + dz), thigh, calf);
+    out.positions[leg * 3 + 1] = thigh;
+    out.positions[leg * 3 + 2] = calf;
   }
 
   // 轮：差速（速度控制）
