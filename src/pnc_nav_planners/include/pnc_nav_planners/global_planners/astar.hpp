@@ -82,6 +82,7 @@ class AStar2D : public pnc_nav_core::GlobalPlannerBase
    // 参数
   double resolution_{0.05};// 栅格分辨率 (m)
   double heuristic_weight_{1.2};// 启发式权重
+  double goal_search_radius_{1.0};// 目标格被占时就近找可通行格的最大半径 (m)
   int max_iterations_{100000};// 最大迭代次数
   int bspline_sample_count_{10};// B样条每段采样点数
   bool allow_unknown_{false};// 是否允许未知区域

@@ -34,9 +34,11 @@ void AStar2D::configure(
     node_->declare_parameter(name_ + ".diagonal_movement", true);
     node_->declare_parameter(name_ + ".bspline_sample_count", 10);
     node_->declare_parameter(name_ + ".start_clear_radius", 0.8);
+    node_->declare_parameter(name_ + ".goal_search_radius", 1.0);
 
     resolution_ = node_->get_parameter(name_ + ".resolution").as_double();
     heuristic_weight_ = node_->get_parameter(name_ + ".heuristic_weight").as_double();
+    goal_search_radius_ = node_->get_parameter(name_ + ".goal_search_radius").as_double();
     max_iterations_ = node_->get_parameter(name_ + ".max_iterations").as_int();
     allow_unknown_ = node_->get_parameter(name_ + ".allow_unknown").as_bool();
     bspline_sample_count_ = std::max(
@@ -299,10 +301,43 @@ nav_msgs::msg::Path AStar2D::createPlan(
     RCLCPP_WARN(node_->get_logger(), "AStar2D: goal out of bounds");
     return empty_path;
     }
-    if(costmap_->isOccupied(goal.pose.position.x, goal.pose.position.y, 0.0))
+    // 目标坐标用局部变量：goal 是 const，被占时要就近平移
+    double goal_x = goal.pose.position.x;
+    double goal_y = goal.pose.position.y;
+    if(costmap_->isOccupied(goal_x, goal_y, 0.0))
     {
-      RCLCPP_WARN(node_->get_logger(), "Goal is occupied");
-      return empty_path;
+      // 目标格被占（地形代价 / 膨胀 / 目标正好压在坡面边缘）时，
+      // 不直接失败：在 goal_search_radius 内就近找一个可通行格（对齐 Nav2 的 goal tolerance 行为）
+      const double max_r = goal_search_radius_;
+      const int rings = static_cast<int>(std::ceil(max_r / resolution_));
+      bool found = false;
+      double best_d = std::numeric_limits<double>::max();
+      GridIndex best{goal_idx.x, goal_idx.y};
+      for (int dy = -rings; dy <= rings && !found; ++dy) {
+        for (int dx = -rings; dx <= rings; ++dx) {
+          const int nx = goal_idx.x + dx;
+          const int ny = goal_idx.y + dy;
+          double wx = 0.0, wy = 0.0;
+          gridToWorld(GridIndex{nx, ny}, wx, wy);
+          const double d = std::hypot(wx - goal_x, wy - goal_y);
+          if (d > max_r) {continue;}
+          if (!costmap_->isInBounds(wx, wy, 0.0)) {continue;}
+          if (costmap_->isOccupied(wx, wy, 0.0)) {continue;}
+          if (d < best_d) {best_d = d; best = GridIndex{nx, ny}; found = true;}
+        }
+      }
+      if (found) {
+        gridToWorld(best, goal_x, goal_y);
+        goal_idx = best;
+        RCLCPP_WARN(
+          node_->get_logger(),
+          "Goal is occupied, shifted to nearest free cell (%.2f, %.2f), d=%.2f m",
+          goal_x, goal_y, best_d);
+      } else {
+        RCLCPP_WARN(
+          node_->get_logger(), "Goal is occupied and no free cell within %.2f m", max_r);
+        return empty_path;
+      }
     }
 
 // 5. 初始化 open_set / g_score / came_from / closed_set

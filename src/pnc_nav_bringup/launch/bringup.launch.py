@@ -119,7 +119,8 @@ def _launch_setup(context, *args, **kwargs):
             actions.append(IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(PathJoinSubstitution([
                     FindPackageShare('pnc_nav_map'), 'launch', 'elevation_map.launch.py'])),
-                launch_arguments={'use_sim_time': use_sim_time}.items(),
+                launch_arguments={'use_sim_time': use_sim_time,
+                                  'robot_frame': 'base'}.items(),
             ))
         actions.append(Node(
             package='pnc_nav_locomotion', executable='locomotion_node',
