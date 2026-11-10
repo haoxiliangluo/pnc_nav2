@@ -57,6 +57,11 @@ private:
   double velocity_gain_{2.0};   // 补偿增益
   double comp_linear_{1.0};     // 线速度补偿状态
   double comp_angular_{1.0};    // 角速度补偿状态
+  // 偏航抑制：无转向指令时用实测角速度做阻尼，抵消坡面/牵引不对称造成的跑偏（KI-024）
+  bool use_yaw_hold_{true};
+  double yaw_hold_gain_{1.2};
+  double yaw_hold_limit_{0.20};  // 最大补偿角速度 (rad/s)
+  double yaw_hold_{0.0};         // 当前补偿量
 
   double stand_thigh_{0.0};
   double stand_calf_{0.0};

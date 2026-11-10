@@ -21,3 +21,4 @@ locomotion:
       use_velocity_feedback: true   # 用 /odom 实测速度做闭环补偿
       velocity_gain: 2.0            # 补偿增益
       odom_topic: "odom"
+      use_yaw_hold: false          # 实测：坡面上做角速度阻尼反而更差（33° vs 17°），默认关掉

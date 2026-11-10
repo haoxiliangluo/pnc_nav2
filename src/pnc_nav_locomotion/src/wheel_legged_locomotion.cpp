@@ -47,6 +47,10 @@ void WheelLeggedLocomotion::configure(
   use_velocity_feedback_ = node_->declare_parameter<bool>(
     name_ + ".use_velocity_feedback", use_velocity_feedback_);
   velocity_gain_ = node_->declare_parameter<double>(name_ + ".velocity_gain", velocity_gain_);
+  use_yaw_hold_ = node_->declare_parameter<bool>(name_ + ".use_yaw_hold", use_yaw_hold_);
+  yaw_hold_gain_ = node_->declare_parameter<double>(name_ + ".yaw_hold_gain", yaw_hold_gain_);
+  yaw_hold_limit_ = node_->declare_parameter<double>(
+    name_ + ".yaw_hold_limit", yaw_hold_limit_);
 
   frequency_ = std::max(10.0, frequency_);
   body_height_ = std::clamp(body_height_, 0.15, thigh_length_ + calf_length_ - 0.01);
@@ -123,10 +127,20 @@ pnc_nav_core::JointCommands WheelLeggedLocomotion::computeJointCommands(
     }
   }
 
+  // 偏航抑制：没有转向指令（或很小）时，用实测角速度做阻尼，
+  // 抵消坡面/四轮牵引不对称导致的"直行跑偏"（KI-024：坡上 12s 偏 16.7°）
+  if (use_yaw_hold_ && use_velocity_feedback_ && std::abs(cmd_vel.angular.z) < 0.02) {
+    // 纯比例阻尼（不要积分：实测积分会自激，把 16° 跑偏放大成 68°）
+    yaw_hold_ = std::clamp(
+      -yaw_hold_gain_ * current_state.angular_vel_z, -yaw_hold_limit_, yaw_hold_limit_);
+  } else {
+    yaw_hold_ = 0.0;   // 有转向指令时不干预
+  }
+
   const double vx = std::clamp(
     cmd_vel.linear.x * linear_scale_ * comp_linear_, -max_linear_, max_linear_);
   const double wz = std::clamp(
-    cmd_vel.angular.z * angular_scale_ * comp_angular_, -1.5, 1.5);
+    cmd_vel.angular.z * angular_scale_ * comp_angular_ + yaw_hold_, -1.5, 1.5);
   const double v_left = vx - wz * track_ * 0.5;
   const double v_right = vx + wz * track_ * 0.5;
   const double w_left = std::clamp(v_left / wheel_radius_, -max_wheel_speed_, max_wheel_speed_);
