@@ -63,6 +63,7 @@ ros2 action send_goal /navigate_to_3d_pose pnc_nav_interfaces/action/NavigateTo3
 | [tutorials/02_first_plugin.md](tutorials/02_first_plugin.md) | 怎么写第一个规划器插件、怎么热插拔？ | ✅ |
 | [guides/runbook.md](guides/runbook.md) | 启动矩阵、参数手册、调参建议 | ✅ |
 | [guides/lio_sam_setup.md](guides/lio_sam_setup.md) | LIO-SAM 3D 定位怎么装、怎么跑、改了什么 | ✅ |
+| [notes/experiment_summary.md](notes/experiment_summary.md) | **所有实验数据汇总**（规划器/消融/跨平台/定位/坡道）+ 可引用结论 | ✅ |
 | [guides/sim_setup.md](guides/sim_setup.md) | 仿真栈怎么搭？`ROS_DOMAIN_ID`/`GZ_PARTITION` 为什么重要？ | 🚧 |
 | [notes/vs_nav2.md](notes/vs_nav2.md) | 和 Nav2 的取舍对照（面试高频） | ✅ |
 | [notes/decisions.md](notes/decisions.md) | 每个关键决策的理由与代价 | ✅ |

@@ -40,6 +40,8 @@
 
 ## 2.5 实验（论文/报告用数据）
 
+> 各组实验的完整数据与可引用结论见 [notes/experiment_summary.md](notes/experiment_summary.md)。
+
 ```bash
 python3 scripts/experiment_runner.py experiments/planner_comparison.yaml   # 跑实验
 PYTHONNOUSERSITE=1 python3 scripts/plot_results.py experiments/results/<目录>  # 出图
