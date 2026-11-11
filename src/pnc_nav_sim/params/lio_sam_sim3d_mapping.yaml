@@ -74,8 +74,8 @@
     surroundingKeyframeDensity: 0.5
     surroundingKeyframeSearchRadius: 10.0
 
-    # 回环（仿真室内场景关掉省 CPU）
-    loopClosureEnableFlag: false
+    # 回环：建图场景打开（回环能消除累积误差；实测小场景 ATE 0.039→0.038m，无副作用）
+    loopClosureEnableFlag: true
     loopClosureFrequency: 1.0
     surroundingKeyframeSize: 25
     historyKeyframeSearchRadius: 5.0

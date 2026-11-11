@@ -75,3 +75,28 @@ scripts/pcd_to_map.py                                # PCD → PGM/YAML
 test/lio_drift_test.py                               # 也可当"走一圈"的驱动脚本
 docs/guides/lio_sam_setup.md                         # LIO-SAM 安装/改造
 ```
+
+## 6. 3D 占据栅格（OctoMap）
+
+```bash
+# 需要：sudo apt install ros-jazzy-octomap-server
+# 前提：正在跑 LIO-SAM（点云话题 /lio_sam/mapping/cloud_registered）
+ros2 launch pnc_nav_map octomap.launch.py           # 默认 cloud_topic=/lio_sam/mapping/cloud_registered
+```
+
+| 输出 | 说明 |
+|---|---|
+| `/octomap_binary` | 3D 占据栅格（二进制概率），frame=map |
+| `/octomap_full` | 完整概率体素 |
+| `/projected_map` | 投影到 2D 的 OccupancyGrid（可直接给 nav2 当全局图） |
+
+配置在 `src/pnc_nav_map/config/octomap.yaml`：分辨率 0.05m、高度带 -1.0~2.5m、
+`latch: true`（建完保持发布）、`publish_free_space: false`（省带宽）。
+
+**一个坑**：LIO-SAM 的配准点云在 `odom` 帧，而 octomap 默认目标帧是 `map`，
+我们的 LIO-SAM 改造只发 `map→base_link`（不发 `map→odom`）→ 消息会被全部丢弃
+（`Message Filter dropping message: frame 'odom'`）。
+`octomap.launch.py` 里补了一个**恒等 `map→odom` 静态 TF**（`publish_map_to_odom:=true`，可关）解决。
+
+实测：`/octomap_binary` 0.05m 分辨率、124 KB、frame=map，无丢弃告警。
+

@@ -1,0 +1,24 @@
+# octomap_server：把 3D 点云（默认 LIO-SAM 配准后的地图点云）建成 3D 占据栅格
+octomap_server:
+  ros__parameters:
+    resolution: 0.05              # 体素边长 (m)
+    frame_id: "map"
+    base_frame_id: "base_link"
+
+    # 只处理这个高度带内的点（避免天花板/地面噪声，按需调整）
+    pointcloud_min_z: -1.0
+    pointcloud_max_z: 2.5
+    occupancy_min_z: -1.0
+    occupancy_max_z: 2.5
+
+    # 保留地面（地图里地面也是占据体素）；要过滤就设 true 并调 ground_filter
+    filter_ground: false
+
+    sensor_model/max_range: 20.0
+    sensor_model/hit: 0.7
+    sensor_model/miss: 0.4
+    sensor_model/min: 0.12
+    sensor_model/max: 0.97
+
+    latch: true                   # 建完图后保持发布（便于下游查询）
+    publish_free_space: false     # 只发占据，省带宽
