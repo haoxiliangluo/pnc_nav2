@@ -198,7 +198,6 @@ ros2 launch pnc_nav_bringup sim_3d_bringup.launch.py
   - [x] LIO-SAM 集成（3D，`localization:=lio_sam`，仿真 TF 误差 0.01m，见 [guides/lio_sam_setup.md](docs/guides/lio_sam_setup.md)）
   - [x] 3D 建图（LIO-SAM 存 PCD → `scripts/pcd_to_map.py` 转 2D 栅格 → 导航闭环，见 [guides/3d_mapping.md](docs/guides/3d_mapping.md)）
   - [x] OctoMap / 3D 占据栅格（`octomap_server` 已接入，见 [guides/3d_mapping.md](docs/guides/3d_mapping.md) §6）
-  - [ ] OctoMap 3D 地图
 
 - [ ] **Phase 4: Go2 机器狗导航**
   - [ ] 3D 路径规划

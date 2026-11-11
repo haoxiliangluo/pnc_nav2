@@ -63,7 +63,7 @@ python3 test/action_smoke_test.py feedback 2.0 2.0
 | 项 | 说明 |
 |---|---|
 | 静态 2D 图 | 只保留"一层"占用信息；多层/悬空结构（桌子、斜坡下方）会被压平 |
-| OctoMap | 未接（`ros-jazzy-octomap-server` 不在本机 apt 源）；需要 3D 占据图时再接 |
+| OctoMap | 已接入（见 §6），但它是独立节点，不会自动进导航栈；要当全局图用需把 `/projected_map` 接给 map_server |
 | 回环 | 建图时 LIO-SAM 回环默认关（`lio_sam_sim3d.yaml`），长走廊会有累积误差 |
 | 地图坐标系 | 与 LIO-SAM 的世界原点（启动位置）一致；换起点建图需要重新对齐 |
 
